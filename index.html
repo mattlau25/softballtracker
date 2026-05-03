@@ -12,36 +12,68 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
-input[type=date]::-webkit-calendar-picker-indicator { filter: none; }
-input[type=time]::-webkit-calendar-picker-indicator { filter: none; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Light theme (default) ── */
+/* ── Base ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── 4pt spacing tokens ── */
 :root {
+  --sp1:  4px;
+  --sp2:  8px;
+  --sp3:  12px;
+  --sp4:  16px;
+  --sp5:  20px;
+  --sp6:  24px;
+  --sp8:  32px;
+  --sp10: 40px;
+  --sp12: 48px;
+  --sp16: 64px;
+
+  /* ── Radius ── */
+  --r1: 4px;
+  --r2: 8px;
+  --r3: 12px;
+  --r4: 16px;
+
+  /* ── Typography ── */
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 14px;
+  --text-md:   16px;
+  --text-lg:   18px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
+  --text-3xl:  28px;
+
+  /* ── Light theme ── */
   --bg:           #f0f2f5;
   --surface:      #ffffff;
   --surface2:     #f7fafc;
   --border:       #e2e8f0;
   --border2:      #edf2f7;
   --text:         #1a202c;
-  --text2:        #4a5568;
-  --muted:        #a0aec0;
-  --label:        #718096;
-  --nav-bg:       #1e3a5f;
-  --nav-text:     rgba(255,255,255,0.55);
+  --text2:        #2d3748;
+  --muted:        #718096;
+  --label:        #4a5568;
+  --nav-bg:       #2c4a6e;
+  --nav-text:     rgba(255,255,255,0.85);
   --nav-active:   #ffffff;
-  --nav-border:   rgba(255,255,255,0.1);
+  --nav-border:   rgba(255,255,255,0.15);
   --primary:      #1e3a5f;
   --primary-text: #ffffff;
   --success:      #276749;
   --danger:       #c53030;
   --blue:         #2b6cb0;
-  --card-shadow:  0 1px 3px rgba(0,0,0,0.05);
+  --card-shadow:  0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
   --spray-foul:   #e8ede8;
   --spray-out:    #d4e6d4;
   --spray-dirt:   #e8d5b0;
@@ -53,6 +85,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   --spray-tap:    #9ab89a;
   --spray-plot:   #1e3a5f;
   --spray-bg:     #eef2ee;
+
+  /* ── Layout ── */
+  --nav-w:    224px;
+  --page-max: 1080px;
+  --page-px:  40px;
+  --page-py:  32px;
 }
 
 /* ── Dark theme ── */
@@ -64,12 +102,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   --border2:      #1a2030;
   --text:         #e2e8f0;
   --text2:        #94a3b8;
-  --muted:        #4a5568;
-  --label:        #64748b;
-  --nav-bg:       #0a0f1a;
-  --nav-text:     rgba(255,255,255,0.45);
+  --muted:        #64748b;
+  --label:        #94a3b8;
+  --nav-bg:       #111d2e;
+  --nav-text:     rgba(255,255,255,0.8);
   --nav-active:   #ffffff;
-  --nav-border:   rgba(255,255,255,0.08);
+  --nav-border:   rgba(255,255,255,0.1);
   --primary:      #4ade80;
   --primary-text: #0d1117;
   --success:      #4ade80;
@@ -89,19 +127,158 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   --spray-bg:     #0a1a0a;
 }
 
-@media (max-width: 640px) {
-  .nav-sidebar { width: 100% !important; min-height: auto !important; position: fixed !important; bottom: 0 !important; top: auto !important; left: 0 !important; right: 0 !important; flex-direction: row !important; padding: 0 !important; border-right: none !important; border-top: 1px solid rgba(255,255,255,0.15) !important; z-index: 100 !important; }
-  .nav-brand { display: none !important; }
-  .nav-user { display: none !important; }
-  .nav-items { display: flex !important; flex-direction: row !important; padding: 0 !important; flex: 1 !important; overflow-x: auto !important; }
-  .nav-item { flex-direction: column !important; padding: 8px 4px !important; font-size: 10px !important; gap: 3px !important; border-left: none !important; border-top: 3px solid transparent !important; min-width: 60px !important; align-items: center !important; }
-  .nav-item-active { border-left-color: transparent !important; border-top-color: #fff !important; }
-  .main-wrap { margin-left: 0 !important; padding-bottom: 70px !important; }
-}
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ── Forms ── */
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator { filter: none; }
 [data-theme="dark"] input[type=date]::-webkit-calendar-picker-indicator,
 [data-theme="dark"] input[type=time]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Tables dark mode ── */
 [data-theme="dark"] table td { border-color: #1f2937 !important; }
-[data-theme="dark"] table th { background: #0d1117 !important; color: #4a5568 !important; border-color: #1f2937 !important; }
+[data-theme="dark"] table th { background: #0d1117 !important; color: #64748b !important; border-color: #1f2937 !important; }
+
+/* ── Nav ── */
+.nav-sidebar {
+  width: var(--nav-w);
+  min-height: 100vh;
+  background: var(--nav-bg);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 100;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px;
+  border-bottom: 1px solid var(--nav-border);
+  flex-shrink: 0;
+}
+.nav-brand-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+.nav-items {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: var(--nav-text);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1.4;
+}
+.nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-item-active { color: #fff !important; background: rgba(255,255,255,0.12) !important; border-left-color: #fff !important; font-weight: 600; }
+.nav-user {
+  padding: 12px 20px;
+  border-top: 1px solid var(--nav-border);
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  flex-shrink: 0;
+}
+
+/* ── Main wrap ── */
+.main-wrap {
+  margin-left: var(--nav-w);
+  min-height: 100vh;
+  background: var(--bg);
+}
+.page-content {
+  padding: var(--page-py) var(--page-px);
+  max-width: var(--page-max);
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+  :root {
+    --nav-w: 200px;
+    --page-px: 24px;
+    --page-py: 24px;
+  }
+}
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  :root {
+    --page-px: 16px;
+    --page-py: 16px;
+  }
+  .nav-sidebar {
+    width: 100% !important;
+    min-height: auto !important;
+    top: auto !important;
+    bottom: 0 !important;
+    flex-direction: row !important;
+    border-top: 1px solid var(--nav-border) !important;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.15);
+  }
+  .nav-brand { display: none !important; }
+  .nav-user  { display: none !important; }
+  .nav-items {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+  .nav-items::-webkit-scrollbar { display: none; }
+  .nav-item {
+    flex-direction: column !important;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    font-size: 10px !important;
+    gap: 4px !important;
+    border-left: none !important;
+    border-top: 3px solid transparent !important;
+    min-width: 60px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1;
+    font-weight: 400 !important;
+  }
+  .nav-item-active {
+    border-left-color: transparent !important;
+    border-top-color: #fff !important;
+    font-weight: 600 !important;
+  }
+  .main-wrap {
+    margin-left: 0 !important;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Collapse 2-col grids on mobile */
+  .form-grid-2 { grid-template-columns: 1fr !important; }
+  /* Stats grid: 3 col on mobile */
+  .stats-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
+  /* Compare side-by-side stacks on mobile */
+  .compare-grid { grid-template-columns: 1fr !important; }
+  /* Page header wraps on mobile */
+  .page-header-row { flex-wrap: wrap !important; gap: 12px !important; }
+}
 </style>
 </head>
 <body>
@@ -225,7 +402,7 @@ function calcGameStats(abs, includeKFoulInK) {
 }
 
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
-function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, handedness = 'R' }) {
+function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, handedness = 'R' }) {
   const W = size, H = Math.round(size * 0.88);
   const HX = W / 2, HY = H - 18;
   const D = size * 0.27; // diamond leg length
@@ -306,6 +483,42 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
         const pullAngle = handedness === 'L' ? 45 : -45; // degrees from center
         return null; // zones shown via dot colors instead
       })()}
+      {/* Hot/cold zones overlay */}
+      {showZones && hits.length > 0 && (() => {
+        const zones = calcHotColdZones(hits);
+        const zoneCoords = [
+          // deep row: LF, CF, RF
+          {x:0,       y:0,        w:W*0.38, h:H*0.5},
+          {x:W*0.38,  y:0,        w:W*0.24, h:H*0.5},
+          {x:W*0.62,  y:0,        w:W*0.38, h:H*0.5},
+          // short row: LF, CF, RF
+          {x:0,       y:H*0.5,    w:W*0.38, h:H*0.5},
+          {x:W*0.38,  y:H*0.5,    w:W*0.24, h:H*0.5},
+          {x:W*0.62,  y:H*0.5,    w:W*0.38, h:H*0.5},
+        ];
+        const avgs = zones.map(z => z.avg);
+        const maxAvg = Math.max(...avgs.filter(v=>v!==null), 0.001);
+        return zones.map((z, i) => {
+          if (z.ab === 0) return null;
+          const avg = z.avg;
+          const avgStr = avg !== null ? '.'+Math.round(avg*1000).toString().padStart(3,'0') : '—';
+          // Color: hot=green, cold=red, based on avg
+          const intensity = avg / maxAvg;
+          const r = Math.round(197 * (1 - intensity));
+          const g2 = Math.round(103 * intensity);
+          const coord = zoneCoords[i];
+          return (
+            <g key={i}>
+              <rect x={coord.x} y={coord.y} width={coord.w} height={coord.h}
+                fill={`rgba(${r},${g2},0,0.25)`} stroke={`rgba(${r},${g2},0,0.4)`} strokeWidth="1"/>
+              <text x={coord.x + coord.w/2} y={coord.y + coord.h/2 - 6} textAnchor="middle" dominantBaseline="middle"
+                fontSize={size*0.038} fontWeight="700" fill={`rgb(${r},${g2},0)`}>{avgStr}</text>
+              <text x={coord.x + coord.w/2} y={coord.y + coord.h/2 + 10} textAnchor="middle"
+                fontSize={size*0.028} fill={`rgb(${r},${g2},0)`}>{z.ab} AB</text>
+            </g>
+          );
+        });
+      })()}
       {/* Previous hits (display mode) */}
       {hits.map((hit, i) => (
         <circle key={i} cx={hit.x * W / (hit.w || 320)} cy={hit.y * H / (hit.h || 281)}
@@ -328,64 +541,87 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const S = {
-  loginWrap: { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', padding:20, background:'var(--bg)' },
-  loginCard: { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, padding:40, maxWidth:380, width:'100%', textAlign:'center', boxShadow:'0 2px 16px rgba(0,0,0,0.08)' },
-  loginTitle: { fontSize:26, fontWeight:700, color:'var(--text)', marginBottom:8 },
-  loginSub: { color:'var(--label)', marginBottom:32, fontSize:14 },
-  googleBtn: { background:'var(--primary)', color:'var(--primary-text)', border:'none', borderRadius:10, padding:'12px 0', fontSize:15, fontWeight:700, cursor:'pointer', width:'100%' },
-  nav: { width:210, minHeight:'100vh', background:'var(--nav-bg)', padding:'0', display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, zIndex:10 },
-  navBrand: { display:'flex', alignItems:'center', gap:10, padding:'20px 18px', borderBottom:'1px solid var(--nav-border)' },
+  // ── Login ──
+  loginWrap:  { display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', padding:24, background:'var(--bg)' },
+  loginCard:  { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, padding:40, maxWidth:384, width:'100%', textAlign:'center', boxShadow:'0 4px 24px rgba(0,0,0,0.08)' },
+  loginTitle: { fontSize:24, fontWeight:700, color:'var(--text)', marginBottom:8, letterSpacing:'-0.02em' },
+  loginSub:   { color:'var(--muted)', marginBottom:32, fontSize:14, lineHeight:1.5 },
+  googleBtn:  { background:'var(--primary)', color:'var(--primary-text)', border:'none', borderRadius:8, padding:'12px 0', fontSize:15, fontWeight:700, cursor:'pointer', width:'100%' },
+
+  // ── Nav (legacy — now handled by CSS classes) ──
+  nav:          { display:'none' },
+  navBrand:     { display:'none' },
   navBrandText: { fontSize:16, fontWeight:700, color:'#fff' },
-  navBrandSub: { fontSize:11, color:'rgba(255,255,255,0.5)', fontWeight:500 },
-  navItems: { flex:1, padding:'10px 0' },
-  navItem: { display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 18px', background:'none', border:'none', borderLeft:'3px solid transparent', color:'var(--nav-text)', cursor:'pointer', fontSize:13, textAlign:'left', transition:'all 0.15s' },
-  navItemActive: { color:'var(--nav-active)', background:'rgba(255,255,255,0.1)', borderLeftColor:'var(--nav-active)' },
-  navUser: { padding:'12px 18px', borderTop:'1px solid var(--nav-border)', fontSize:12, color:'rgba(255,255,255,0.4)' },
-  signOutBtn: { background:'none', border:'none', color:'rgba(255,255,255,0.4)', cursor:'pointer', padding:0, fontSize:12, textDecoration:'underline', marginTop:4 },
-  mainWrap: { marginLeft:210, minHeight:'100vh', background:'var(--bg)' },
-  page: { padding:'28px 28px', maxWidth:820, margin:'0 auto' },
-  pageHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 },
-  pageTitle: { fontSize:22, fontWeight:700, color:'var(--text)' },
-  card: { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:20, marginBottom:16, boxShadow:'var(--card-shadow)' },
+  navBrandSub:  { fontSize:16, fontWeight:700, color:'#fff' },
+  navItems:     { display:'none' },
+  navItem:      { display:'none' },
+  navItemActive:{},
+  navUser:      { display:'none' },
+  signOutBtn:   { background:'none', border:'none', color:'rgba(255,255,255,0.7)', cursor:'pointer', padding:0, fontSize:12, textDecoration:'underline', marginTop:4 },
+
+  // ── Layout ──
+  mainWrap: { marginLeft:'var(--nav-w)', minHeight:'100vh', background:'var(--bg)' },
+  page:     { padding:'var(--page-py) var(--page-px)', maxWidth:'var(--page-max)', margin:'0 auto', width:'100%' },
+
+  // ── Page header ──
+  pageHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, gap:16, flexWrap:'wrap' },
+  pageTitle:  { fontSize:22, fontWeight:700, color:'var(--text)', letterSpacing:'-0.02em', lineHeight:1.2 },
+
+  // ── Cards ──
+  card:      { background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:20, marginBottom:16, boxShadow:'var(--card-shadow)' },
   cardTitle: { fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:16 },
-  formGrid2: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 },
-  formGroup: { display:'flex', flexDirection:'column', gap:5 },
-  label: { fontSize:11, color:'var(--label)', textTransform:'uppercase', letterSpacing:'0.07em', fontWeight:600 },
-  input: { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%', transition:'border-color 0.15s' },
-  select: { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%', cursor:'pointer' },
-  hint: { fontSize:11, color:'var(--muted)', marginTop:3 },
-  hintGreen: { fontSize:11, color:'var(--success)', marginTop:3, fontWeight:600 },
-  checkRow: { display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, color:'var(--text)' },
-  btnPrimary: { background:'var(--primary)', color:'var(--primary-text)', border:'none', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:700, cursor:'pointer' },
-  btnSecondary: { background:'var(--surface)', color:'var(--label)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 18px', fontSize:13, cursor:'pointer' },
-  btnSmall: { background:'var(--surface)', color:'var(--label)', border:'1px solid var(--border)', borderRadius:6, padding:'5px 10px', fontSize:12, cursor:'pointer' },
-  btnDanger: { background:'var(--surface)', color:'var(--danger)', border:'1px solid #fed7d7', borderRadius:6, padding:'5px 10px', fontSize:12, cursor:'pointer' },
-  backBtn: { background:'none', border:'none', color:'var(--label)', cursor:'pointer', fontSize:13, padding:0, display:'flex', alignItems:'center', gap:4 },
-  list: { display:'flex', flexDirection:'column', gap:8 },
-  listItem: { display:'flex', alignItems:'center', gap:12, padding:'13px 16px', background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)' },
-  listTitle: { fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:3 },
-  listSub: { fontSize:12, color:'var(--muted)' },
+
+  // ── Forms ──
+  formGrid2: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 },
+  formGroup: { display:'flex', flexDirection:'column', gap:4 },
+  label:     { fontSize:11, color:'var(--label)', textTransform:'uppercase', letterSpacing:'0.07em', fontWeight:600 },
+  input:     { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%', transition:'border-color 0.15s', lineHeight:1.4 },
+  select:    { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 12px', color:'var(--text)', fontSize:14, outline:'none', width:'100%', cursor:'pointer', lineHeight:1.4 },
+  hint:      { fontSize:12, color:'var(--muted)', marginTop:4, lineHeight:1.4 },
+  hintGreen: { fontSize:12, color:'var(--success)', marginTop:4, fontWeight:600 },
+  checkRow:  { display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:14, color:'var(--text)' },
+
+  // ── Buttons ──
+  btnPrimary:   { background:'var(--primary)', color:'var(--primary-text)', border:'none', borderRadius:8, padding:'10px 20px', fontSize:14, fontWeight:600, cursor:'pointer', lineHeight:1.4, whiteSpace:'nowrap' },
+  btnSecondary: { background:'var(--surface)', color:'var(--label)', border:'1px solid var(--border)', borderRadius:8, padding:'10px 16px', fontSize:14, cursor:'pointer', lineHeight:1.4, whiteSpace:'nowrap' },
+  btnSmall:     { background:'var(--surface)', color:'var(--label)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 12px', fontSize:12, cursor:'pointer', whiteSpace:'nowrap' },
+  btnDanger:    { background:'var(--surface)', color:'var(--danger)', border:'1px solid var(--danger)', borderRadius:6, padding:'6px 12px', fontSize:12, cursor:'pointer', whiteSpace:'nowrap' },
+  backBtn:      { background:'none', border:'none', color:'var(--muted)', cursor:'pointer', fontSize:13, padding:0, display:'flex', alignItems:'center', gap:4, lineHeight:1.4 },
+
+  // ── Lists ──
+  list:      { display:'flex', flexDirection:'column', gap:8 },
+  listItem:  { display:'flex', alignItems:'center', gap:12, padding:'12px 16px', background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)' },
+  listTitle: { fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:2, lineHeight:1.4 },
+  listSub:   { fontSize:12, color:'var(--muted)', lineHeight:1.4 },
+
+  // ── Empty states ──
   empty: { textAlign:'center', padding:'48px 20px', color:'var(--muted)' },
-  muted: { color:'var(--muted)', fontSize:13 },
-  outGrp: { marginBottom:14 },
-  outGrpLabel: { fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:7 },
-  outBtns: { display:'flex', flexWrap:'wrap', gap:7 },
-  outBtn: { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'7px 11px', fontSize:12, color:'var(--label)', cursor:'pointer', transition:'all 0.1s' },
-  outBtnHit: { background:'rgba(39,103,73,0.12)', border:'1px solid var(--success)', color:'var(--success)', fontWeight:600 },
-  outBtnOut: { background:'rgba(197,48,48,0.12)', border:'1px solid var(--danger)', color:'var(--danger)', fontWeight:600 },
-  outBtnOther: { background:'rgba(43,108,176,0.12)', border:'1px solid var(--blue)', color:'var(--blue)', fontWeight:600 },
+  muted: { color:'var(--muted)', fontSize:14, lineHeight:1.5 },
+
+  // ── Outcome buttons ──
+  outGrp:      { marginBottom:16 },
+  outGrpLabel: { fontSize:11, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:8 },
+  outBtns:     { display:'flex', flexWrap:'wrap', gap:8 },
+  outBtn:      { background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:13, color:'var(--label)', cursor:'pointer', transition:'all 0.1s', lineHeight:1.3 },
+  outBtnHit:   { background:'rgba(39,103,73,0.1)',  border:'1px solid var(--success)', color:'var(--success)', fontWeight:600 },
+  outBtnOut:   { background:'rgba(197,48,48,0.1)',  border:'1px solid var(--danger)',  color:'var(--danger)',  fontWeight:600 },
+  outBtnOther: { background:'rgba(43,108,176,0.1)', border:'1px solid var(--blue)',    color:'var(--blue)',    fontWeight:600 },
+
+  // ── Stats grid ──
   statsGrid: { display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:8 },
-  statCell: { background:'var(--surface2)', borderRadius:8, padding:'10px 6px', textAlign:'center', border:'1px solid var(--border)' },
-  statLabel: { fontSize:10, color:'var(--muted)', fontWeight:700, textTransform:'uppercase', marginBottom:4 },
-  statVal: { fontSize:18, fontWeight:700, color:'var(--text)' },
-  statValSm: { fontSize:13, fontWeight:700, color:'var(--text)' },
-  badge: { background:'var(--surface2)', color:'var(--label)', borderRadius:5, padding:'2px 6px', fontSize:11, display:'inline-block', border:'1px solid var(--border)' },
-  resultBadge: { borderRadius:8, padding:'5px 12px', fontSize:13, fontWeight:700, flexShrink:0 },
-  metaRow: { display:'flex', flexWrap:'wrap', gap:'6px 20px', fontSize:12 },
-  metaItem: { color:'var(--muted)' },
-  metaVal: { color:'var(--label)', marginLeft:4 },
-  divider: { borderColor:'var(--border)', margin:'16px 0' },
-  sectionTitle: { fontSize:16, fontWeight:600, color:'var(--text)', marginBottom:14 },
+  statCell:  { background:'var(--surface2)', borderRadius:8, padding:'12px 8px', textAlign:'center', border:'1px solid var(--border)' },
+  statLabel: { fontSize:11, color:'var(--muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 },
+  statVal:   { fontSize:20, fontWeight:700, color:'var(--text)', lineHeight:1.2 },
+  statValSm: { fontSize:14, fontWeight:700, color:'var(--text)' },
+
+  // ── Misc ──
+  badge:        { background:'var(--surface2)', color:'var(--label)', borderRadius:4, padding:'2px 6px', fontSize:11, display:'inline-block', border:'1px solid var(--border)', fontWeight:500 },
+  resultBadge:  { borderRadius:8, padding:'4px 12px', fontSize:13, fontWeight:700, flexShrink:0 },
+  metaRow:      { display:'flex', flexWrap:'wrap', gap:'4px 16px', fontSize:13 },
+  metaItem:     { color:'var(--muted)' },
+  metaVal:      { color:'var(--label)', marginLeft:4 },
+  divider:      { borderColor:'var(--border)', margin:'16px 0' },
+  sectionTitle: { fontSize:16, fontWeight:600, color:'var(--text)', marginBottom:16, lineHeight:1.3 },
 };
 
 // ─── LOGIN SCREEN ──────────────────────────────────────────────────────────────
@@ -419,7 +655,7 @@ const NAV = [
   { id:'gamelog', label:'Game Log'},
   { id:'trends',  label:'Trends'  },
   { id:'seasons', label:'Seasons' },
-  { id:'bats',    label:'My Bats' },
+  { id:'bats',    label:'Bats'    },
   { id:'profile', label:'Profile' },
 ];
 function NavIcon({ id }) {
@@ -435,22 +671,23 @@ function NavIcon({ id }) {
 }
 function Sidebar({ page, setPage, user }) {
   return (
-    <nav style={S.nav} className="nav-sidebar">
-      <div style={S.navBrand} className="nav-brand">
-        <i className="fa-solid fa-baseball" style={{fontSize:20, color:'rgba(255,255,255,0.9)'}}></i>
-        <div><div style={S.navBrandText}>Softball</div><div style={S.navBrandSub}>Tracker</div></div>
+    <nav className="nav-sidebar">
+      <div className="nav-brand">
+        <i className="fa-solid fa-baseball" style={{fontSize:18, color:'rgba(255,255,255,0.9)', flexShrink:0}}></i>
+        <span className="nav-brand-text">Softball Tracker</span>
       </div>
-      <div style={S.navItems} className="nav-items">
+      <div className="nav-items">
         {NAV.map(n => (
           <button key={n.id} onClick={() => setPage(n.id)}
-            className={`nav-item${page.startsWith(n.id) ? ' nav-item-active' : ''}`}
-            style={{...S.navItem, ...(page.startsWith(n.id) ? S.navItemActive : {})}}>
-            <span style={{width:18, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}><NavIcon id={n.id}/></span>
+            className={`nav-item${page.startsWith(n.id) ? ' nav-item-active' : ''}`}>
+            <span style={{width:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, opacity:page.startsWith(n.id)?1:0.8}}>
+              <NavIcon id={n.id}/>
+            </span>
             <span>{n.label}</span>
           </button>
         ))}
       </div>
-      <div style={S.navUser} className="nav-user">
+      <div className="nav-user">
         <div style={{marginBottom:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{user.email}</div>
         <button onClick={() => auth.signOut()} style={S.signOutBtn}>Sign out</button>
       </div>
@@ -473,11 +710,11 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
   };
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}><h2 style={S.pageTitle}>Profile</h2></div>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Profile</h2></div>
       <div style={S.card}>
         <div style={S.cardTitle}>Personal Info</div>
-        <div style={S.formGrid2}>
+        <div style={S.formGrid2} className="form-grid-2">
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Display Name</label>
             <input style={S.input} value={p.name} onChange={e => upd('name', e.target.value)} placeholder="Your name"/>
@@ -566,13 +803,13 @@ function BatsPage({ uid }) {
   const archivedBats = bats.filter(b => b.archived);
 
   if (editing !== null) return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row">
         <button onClick={() => setEditing(null)} style={S.backBtn}>← Back</button>
         <h2 style={S.pageTitle}>{editing === 'new' ? 'Add Bat' : 'Edit Bat'}</h2>
       </div>
       <div style={S.card}>
-        <div style={S.formGrid2}>
+        <div style={S.formGrid2} className="form-grid-2">
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Bat Name / Model *</label>
             <input style={S.input} value={form.name} onChange={e => upd('name', e.target.value)} placeholder="e.g. DeMarini CF Zen 26oz"/>
@@ -628,14 +865,14 @@ function BatsPage({ uid }) {
   );
 
   return (
-    <div style={S.page}>
+    <div className="page-content">
       {confirmDel && <ConfirmModal message="Delete this bat? It will be removed from your bat list but your past AB records won't be affected." onConfirm={()=>del(confirmDel)} onCancel={()=>setConfirmDel(null)}/>}
-      <div style={S.pageHeader}>
-        <h2 style={S.pageTitle}>My Bats</h2>
+      <div style={S.pageHeader} className="page-header-row">
+        <h2 style={S.pageTitle}>Bats</h2>
         <button onClick={startNew} style={S.btnPrimary}>+ Add Bat</button>
       </div>
       {loading ? <p style={S.muted}>Loading...</p> : bats.length === 0 ? (
-        <div style={S.empty}><p>No bats registered yet.</p><button onClick={startNew} style={{...S.btnPrimary,marginTop:14}}>Add your first bat</button></div>
+        <div style={S.empty}><p>No bats registered yet.</p></div>
       ) : (
         <>
           <div style={S.list}>
@@ -692,55 +929,189 @@ async function exportCSV(uid) {
   URL.revokeObjectURL(url);
 }
 
-// ─── GAMES PAGE ────────────────────────────────────────────────────────────────
+// ─── HAPTIC FEEDBACK ───────────────────────────────────────────────────────────
+function haptic(style='light') {
+  if (navigator.vibrate) {
+    if (style === 'light') navigator.vibrate(8);
+    else if (style === 'medium') navigator.vibrate(20);
+    else if (style === 'success') navigator.vibrate([10, 50, 10]);
+  }
+}
+
+// ─── HOT/COLD ZONES ────────────────────────────────────────────────────────────
+// Divides field into 6 zones, calculates AVG per zone
+function calcHotColdZones(hits) {
+  // Zones: LF-deep, CF-deep, RF-deep, LF-short, CF-short, RF-short
+  const zones = Array.from({length:6}, () => ({h:0, ab:0}));
+  hits.forEach(hit => {
+    if (!hit.spray) return;
+    const W = hit.spray.w || 320, H = hit.spray.h || 281;
+    const nx = hit.spray.x / W; // 0=left, 1=right
+    const ny = hit.spray.y / H; // 0=top(deep), 1=bottom(home)
+    const col = nx < 0.38 ? 0 : nx < 0.62 ? 1 : 2; // L/C/R
+    const row = ny < 0.5 ? 0 : 1; // deep/short
+    const zone = row * 3 + col;
+    zones[zone].ab++;
+    if (COUNTS_AS_HIT.has(hit.outcome)) zones[zone].h++;
+  });
+  return zones.map(z => ({
+    ...z,
+    avg: z.ab > 0 ? z.h / z.ab : null
+  }));
+}
+
+// ─── CSV IMPORT ────────────────────────────────────────────────────────────────
+async function importFromCSV(uid, csvText) {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) throw new Error('CSV appears empty');
+  
+  // Parse CSV rows (handle quoted fields)
+  const parseRow = line => {
+    const result = [];
+    let current = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQuotes = !inQuotes; }
+      else if (line[i] === ',' && !inQuotes) { result.push(current); current = ''; }
+      else { current += line[i]; }
+    }
+    result.push(current);
+    return result;
+  };
+
+  const headers = parseRow(lines[0]);
+
+  // Validate this looks like a softball tracker export
+  const requiredHeaders = ['Date', 'Opponent', 'AB#', 'Outcome'];
+  const missing = requiredHeaders.filter(h => !headers.includes(h));
+  if (missing.length > 0) {
+    throw new Error(`This doesn't look like a Softball Tracker CSV. Missing columns: ${missing.join(', ')}`);
+  }
+  const rows = lines.slice(1).map(parseRow);
+
+  // Group rows by game (Date + Opponent)
+  const gameMap = {};
+  rows.forEach(row => {
+    const get = h => { const i = headers.indexOf(h); return i >= 0 ? row[i]?.trim() : ''; };
+    const key = `${get('Date')}__${get('Opponent')}`;
+    if (!gameMap[key]) {
+      gameMap[key] = {
+        date: get('Date'), dayOfWeek: get('Day'), opponent: get('Opponent'),
+        park: get('Park'), homeAway: get('Home/Away'), dayNight: get('Day/Night'),
+        myScore: get('My Score'), oppScore: get('Opp Score'),
+        teamName: get('Team'), league: get('League'), tier: get('Tier'),
+        season: get('Season'), comments: get('Game Comments'),
+        abs: []
+      };
+    }
+    const abNum = parseInt(get('AB#'));
+    if (abNum > 0) {
+      gameMap[key].abs.push({
+        outcome: get('Outcome'), subOutcome: get('Sub-Outcome'),
+        bases: parseInt(get('Bases'))||0, rbi: parseInt(get('RBI'))||0,
+        runScored: get('Run') === 'Y', batName: get('Bat'),
+        position: get('Position'), comments: get('AB Comments'),
+        countAsAB: COUNTS_AS_AB.has(get('Outcome')),
+        countAsHit: COUNTS_AS_HIT.has(get('Outcome')),
+      });
+    }
+  });
+
+  // Write to Firebase
+  let gamesImported = 0, absImported = 0;
+  for (const gameData of Object.values(gameMap)) {
+    const { abs, ...gameFields } = gameData;
+    const ref = await gamesCol(uid).add({
+      ...gameFields,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      imported: true
+    });
+    for (const ab of abs) {
+      await absCol(uid, ref.id).add({
+        ...ab,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      absImported++;
+    }
+    gamesImported++;
+  }
+  return { gamesImported, absImported };
+}
+
+
 function GamesPage({ uid, setPage, setGameId }) {
   const [games, setGames] = useState([]);
   const [allABs, setAllABs] = useState({});
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [search, setSearch] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = React.useRef(null);
 
-  useEffect(() => {
-    const go = async () => {
-      const snap = await gamesCol(uid).orderBy('date','desc').get();
-      const gdata = snap.docs.map(d => ({id:d.id,...d.data()}));
-      setGames(gdata);
-      const abResults = await Promise.all(gdata.map(g => absCol(uid,g.id).orderBy('timestamp','asc').get()));
-      const absMap = {};
-      gdata.forEach((g,i) => { absMap[g.id] = abResults[i].docs.map(d=>({id:d.id,...d.data()})); });
-      setAllABs(absMap);
-      setLoading(false);
-    };
-    go();
-  }, [uid]);
+  const loadAll = async () => {
+    const snap = await gamesCol(uid).orderBy('date','desc').get();
+    const gdata = snap.docs.map(d => ({id:d.id,...d.data()}));
+    setGames(gdata);
+    const abResults = await Promise.all(gdata.map(g => absCol(uid,g.id).orderBy('timestamp','asc').get()));
+    const absMap = {};
+    gdata.forEach((g,i) => { absMap[g.id] = abResults[i].docs.map(d=>({id:d.id,...d.data()})); });
+    setAllABs(absMap);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadAll(); }, [uid]);
 
   const go = id => { setGameId(id); setPage('game-detail'); };
 
-  // Streak calculation
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const result = await importFromCSV(uid, text);
+      setImportResult(result);
+      await loadAll();
+    } catch(err) {
+      setImportResult({error: err.message});
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
+  const searchLower = search.toLowerCase();
+  const filteredGames = search
+    ? games.filter(g =>
+        (g.opponent||'').toLowerCase().includes(searchLower) ||
+        (g.park||'').toLowerCase().includes(searchLower) ||
+        (g.teamName||'').toLowerCase().includes(searchLower) ||
+        (g.season||'').toLowerCase().includes(searchLower) ||
+        (g.league||'').toLowerCase().includes(searchLower)
+      )
+    : games;
+
   const streak = (() => {
     if (!games.length) return null;
     const sorted = [...games].sort((a,b) => b.date.localeCompare(a.date));
-    let hitStreak = 0, gamesToday = 0;
+    let hitStreak = 0;
     for (const g of sorted) {
       const abs = allABs[g.id] || [];
-      const hasHit = abs.some(ab => COUNTS_AS_HIT.has(ab.outcome));
-      if (hasHit) hitStreak++;
+      if (abs.some(ab => COUNTS_AS_HIT.has(ab.outcome))) hitStreak++;
       else break;
     }
     return hitStreak >= 2 ? hitStreak : null;
   })();
 
-  // Career highs
   const careerHighs = (() => {
     if (!games.length) return null;
-    let bestAVG = 0, bestH = 0, bestRBI = 0, bestGame = null;
+    let bestH = 0, bestRBI = 0;
     games.forEach(g => {
-      const abs = allABs[g.id] || [];
-      const s = calcGameStats(abs, false);
-      if (s.h > bestH) { bestH = s.h; }
-      if (s.rbi > bestRBI) { bestRBI = s.rbi; }
-      if (s.ab >= 3 && s.h/s.ab > bestAVG) { bestAVG = s.h/s.ab; bestGame = g; }
+      const s = calcGameStats(allABs[g.id]||[], false);
+      if (s.h > bestH) bestH = s.h;
+      if (s.rbi > bestRBI) bestRBI = s.rbi;
     });
-    return { bestH, bestRBI, bestAVG };
+    return { bestH, bestRBI };
   })();
 
   const doExport = async () => {
@@ -749,78 +1120,66 @@ function GamesPage({ uid, setPage, setGameId }) {
   };
 
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row">
         <h2 style={S.pageTitle}>Games</h2>
-        <div style={{display:'flex', gap:8}}>
-          {games.length > 0 && (
-            <button onClick={doExport} disabled={exporting} style={S.btnSecondary}>
-              {exporting ? 'Exporting...' : '↓ Export CSV'}
-            </button>
-          )}
+        <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+          {games.length > 0 && <button onClick={doExport} disabled={exporting} style={S.btnSecondary}>{exporting ? 'Exporting...' : '↓ CSV'}</button>}
+          <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={S.btnSecondary}>{importing ? 'Importing...' : '↑ Import'}</button>
+          <input ref={fileInputRef} type="file" accept=".csv" style={{display:'none'}} onChange={handleImport}/>
           <button onClick={() => setPage('new-game')} style={S.btnPrimary}>+ New Game</button>
         </div>
       </div>
 
-      {/* Streak / highlights */}
-      {!loading && games.length > 0 && (streak || careerHighs) && (
-        <div style={{...S.card, background:'#f0f4ff', border:'1px solid #c7d2fe', marginBottom:16}}>
-          <div style={{display:'flex', flexWrap:'wrap', gap:16}}>
-            {streak && (
-              <div>
-                <div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Hit Streak</div>
-                <div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{streak} <span style={{fontSize:13, fontWeight:400}}>games</span></div>
-              </div>
-            )}
-            {careerHighs?.bestH > 0 && (
-              <div>
-                <div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Best H (game)</div>
-                <div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{careerHighs.bestH}</div>
-              </div>
-            )}
-            {careerHighs?.bestRBI > 0 && (
-              <div>
-                <div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Best RBI (game)</div>
-                <div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{careerHighs.bestRBI}</div>
-              </div>
-            )}
+      {importResult && (
+        <div style={{...S.card, background:importResult.error?'rgba(197,48,48,0.08)':'rgba(39,103,73,0.08)', border:`1px solid ${importResult.error?'var(--danger)':'var(--success)'}`, marginBottom:12}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <span style={{fontSize:13, color:importResult.error?'var(--danger)':'var(--success)', fontWeight:600}}>
+              {importResult.error ? `Import failed: ${importResult.error}` : `Imported ${importResult.gamesImported} game${importResult.gamesImported!==1?'s':''} and ${importResult.absImported} AB${importResult.absImported!==1?'s':''}`}
+            </span>
+            <button onClick={() => setImportResult(null)} style={S.btnSmall}>✕</button>
           </div>
         </div>
       )}
 
-      {loading ? <p style={S.muted}>Loading...</p> : games.length === 0 ? (
+      {games.length > 0 && (
+        <div style={{marginBottom:12, position:'relative'}}>
+          <input style={{...S.input, paddingLeft:34}}
+            value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opponent, park, team, season..."/>
+          <svg style={{position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', opacity:0.4}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          {search && <button onClick={()=>setSearch('')} style={{position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:14}}>✕</button>}
+        </div>
+      )}
+
+      {!loading && !search && games.length > 0 && (streak || (careerHighs?.bestH > 0)) && (
+        <div style={{...S.card, background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)', marginBottom:16}}>
+          <div style={{display:'flex', flexWrap:'wrap', gap:20}}>
+            {streak && <div><div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Hit Streak</div><div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{streak} <span style={{fontSize:13, fontWeight:400}}>games</span></div></div>}
+            {careerHighs?.bestH > 0 && <div><div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Best H (game)</div><div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{careerHighs.bestH}</div></div>}
+            {careerHighs?.bestRBI > 0 && <div><div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Best RBI (game)</div><div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{careerHighs.bestRBI}</div></div>}
+          </div>
+        </div>
+      )}
+
+      {loading ? <p style={S.muted}>Loading...</p> : filteredGames.length === 0 ? (
         <div style={S.empty}>
-          <p style={{marginBottom:6}}>No games recorded yet.</p>
-          <p style={{fontSize:12, marginBottom:16, color:'#a0aec0'}}>Start by recording your first game.</p>
-          <button onClick={() => setPage('new-game')} style={S.btnPrimary}>Record first game</button>
+          {search ? <p>No games match "{search}".</p> : <p style={{marginBottom:6}}>No games recorded yet.</p>}
         </div>
       ) : (
         <div style={S.list}>
-          {games.map(g => {
+          {filteredGames.map(g => {
             const res = getResult(g);
             const abs = allABs[g.id] || [];
             const s = calcGameStats(abs, false);
             return (
               <div key={g.id} style={{...S.listItem, cursor:'pointer'}} onClick={() => go(g.id)}>
-                {res && <div style={{...S.resultBadge, background: res.color+'18', color: res.color}}>{res.label}</div>}
+                {res && <div style={{...S.resultBadge, background:res.color+'18', color:res.color}}>{res.label}</div>}
                 <div style={{flex:1, minWidth:0}}>
-                  <div style={S.listTitle}>
-                    vs. {g.opponent || 'Unknown'}
-                    {g.myScore !== '' && g.oppScore !== '' && <span style={{color:'#718096', fontWeight:400}}> · {g.myScore}–{g.oppScore}</span>}
-                  </div>
-                  <div style={S.listSub}>
-                    {fmtDate(g.date)}
-                    {g.park && ` · ${g.park}`}
-                    {g.teamName && ` · ${g.teamName}`}
-                    {g.season && ` · ${g.season}`}
-                  </div>
-                  {abs.length > 0 && (
-                    <div style={{fontSize:11, color:'#a0aec0', marginTop:2}}>
-                      {s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}
-                    </div>
-                  )}
+                  <div style={S.listTitle}>vs. {g.opponent||'Unknown'}{g.myScore!==''&&g.oppScore!==''&&<span style={{color:'var(--label)',fontWeight:400}}> · {g.myScore}–{g.oppScore}</span>}</div>
+                  <div style={S.listSub}>{fmtDate(g.date)}{g.park&&` · ${g.park}`}{g.teamName&&` · ${g.teamName}`}{g.season&&` · ${g.season}`}</div>
+                  {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}</div>}
                 </div>
-                <span style={{color:'#a0aec0', fontSize:16, flexShrink:0}}>›</span>
+                <span style={{color:'var(--muted)', fontSize:16, flexShrink:0}}>›</span>
               </div>
             );
           })}
@@ -859,8 +1218,8 @@ function NewGamePage({ uid, setPage, setGameId }) {
   };
 
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row">
         <button onClick={() => setPage('games')} style={S.backBtn}>← Games</button>
         <h2 style={S.pageTitle}>New Game</h2>
       </div>
@@ -881,7 +1240,7 @@ function NewGamePage({ uid, setPage, setGameId }) {
 
       <div style={S.card}>
         <div style={S.cardTitle}>Game Info</div>
-        <div style={S.formGrid2}>
+        <div style={S.formGrid2} className="form-grid-2">
           <div style={S.formGroup}>
             <label style={S.label}>Date *</label>
             <input type="date" style={S.input} value={f.date} onChange={e => upd('date', e.target.value)}/>
@@ -924,7 +1283,7 @@ function NewGamePage({ uid, setPage, setGameId }) {
       </div>
       <div style={S.card}>
         <div style={S.cardTitle}>Team & League</div>
-        <div style={S.formGrid2}>
+        <div style={S.formGrid2} className="form-grid-2">
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Season Name</label>
             <input style={S.input} value={f.season} onChange={e => upd('season', e.target.value)} placeholder="e.g. 2026 Sluggers"/>
@@ -956,11 +1315,13 @@ function NewGamePage({ uid, setPage, setGameId }) {
 }
 
 // ─── AB FORM ───────────────────────────────────────────────────────────────────
-function ABForm({ uid, gameId, ab, bats, onSave, onCancel }) {
+function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false }) {
   const isEdit = !!ab;
   const blank = { batId:'', outcome:'', subOutcome:'', bases:0, rbi:0, runScored:false, spray:null, comments:'', position:'', putouts:0, assists:0, errors:0 };
   const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
-  const upd = (k, v) => setF(x => ({...x, [k]: v}));
+  const [dirty, setDirty] = useState(false);
+  const [toast, setToast] = useState(null);
+  const upd = (k, v) => { setF(x => ({...x, [k]: v})); setDirty(true); };
 
   const outcomeGroup = HIT_OUTCOMES.includes(f.outcome) ? 'hit' : OUT_OUTCOMES.includes(f.outcome) ? 'out' : OTHER_OUTCOMES.includes(f.outcome) ? 'other' : '';
   const isFoulOut = f.outcome === 'Foul Out';
@@ -972,7 +1333,14 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel }) {
   const showRBI = f.outcome && !['Strikeout'].includes(f.outcome) && !isFoulK && !(isFoulOut && !f.subOutcome);
   const showRunScored = f.outcome && !isFoulK && !(isFoulOut && !f.subOutcome);
 
-  const setOutcome = (o) => setF(x => ({...x, outcome: o, subOutcome:'', spray: null, bases: HIT_BASES[o] || 0}));
+  const setOutcome = (o) => { haptic('light'); setF(x => ({...x, outcome: o, subOutcome:'', spray: null, bases: HIT_BASES[o] || 0})); setDirty(true); };
+
+  const handleCancel = () => {
+    if (dirty && !isEdit) {
+      if (!window.confirm('You have unsaved changes. Discard this at bat?')) return;
+    }
+    onCancel();
+  };
 
   const save = async () => {
     const bat = bats.find(b => b.id === f.batId);
@@ -986,41 +1354,69 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel }) {
     };
     if (isEdit) await absCol(uid, gameId).doc(ab.id).update(data);
     else await absCol(uid, gameId).add(data);
-    onSave();
+    haptic('success');
+    // Show toast
+    const toastMsg = f.outcome + (f.rbi > 0 ? `, ${f.rbi} RBI` : '') + (f.runScored ? ', R' : '');
+    setToast(toastMsg);
+    setTimeout(() => { setToast(null); onSave(); }, 1800);
   };
 
   const OBtn = ({ label, group }) => {
     const active = f.outcome === label;
-    const style = active ? (group === 'hit' ? S.outBtnHit : group === 'out' ? S.outBtnOut : S.outBtnOther) : S.outBtn;
+    const baseStyle = quickMode
+      ? { ...S.outBtn, padding:'14px 16px', fontSize:14, flex:'1 1 auto', textAlign:'center', minWidth:80 }
+      : S.outBtn;
+    const style = active ? (group === 'hit' ? {...baseStyle,...S.outBtnHit} : group === 'out' ? {...baseStyle,...S.outBtnOut} : {...baseStyle,...S.outBtnOther}) : baseStyle;
     return <button style={style} onClick={() => setOutcome(label)}>{label}</button>;
   };
   const SubBtn = ({ label, val }) => {
     const active = f.subOutcome === val;
-    return <button style={{...S.outBtn, ...(active ? S.outBtnOut : {})}} onClick={() => upd('subOutcome', val)}>{label}</button>;
+    return <button style={{...S.outBtn, ...(active ? S.outBtnOut : {}), ...(quickMode?{padding:'12px 14px',fontSize:13}:{})}} onClick={() => { haptic('light'); upd('subOutcome', val); }}>{label}</button>;
   };
   const BaseBtn = ({ n }) => (
-    <button style={{...S.outBtn, ...(f.bases===n ? S.outBtnHit : {})}} onClick={() => upd('bases', n)}>{n}B</button>
+    <button style={{...S.outBtn, ...(f.bases===n ? S.outBtnHit : {}), ...(quickMode?{padding:'12px 16px',fontSize:14}:{})}} onClick={() => upd('bases', n)}>{n}B</button>
+  );
+
+  // Toast overlay
+  if (toast) return (
+    <div style={{...S.card, border:'1px solid var(--success)', background:'rgba(39,103,73,0.08)', textAlign:'center', padding:'24px 16px'}}>
+      <div style={{fontSize:13, color:'var(--muted)', marginBottom:4}}>Saved</div>
+      <div style={{fontSize:18, fontWeight:700, color:'var(--success)'}}>{toast}</div>
+    </div>
   );
 
   return (
-    <div style={{...S.card, border:'1px solid #e2e8f0'}}>
-      <div style={S.cardTitle}>{isEdit ? 'Edit At Bat' : 'Record At Bat'}</div>
+    <div style={{...S.card, border:'1px solid var(--border)'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
+        <div style={S.cardTitle}>{isEdit ? 'Edit At Bat' : quickMode ? 'Quick AB' : 'Record At Bat'}</div>
+      </div>
 
       {/* Bat */}
-      <div style={{...S.formGroup, marginBottom:16}}>
-        <label style={S.label}>Bat Used</label>
-        <select style={S.select} value={f.batId} onChange={e => upd('batId', e.target.value)}>
-          <option value="">— Select bat —</option>
-          {bats.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-      </div>
+      {!quickMode && (
+        <div style={{...S.formGroup, marginBottom:16}}>
+          <label style={S.label}>Bat Used</label>
+          <select style={S.select} value={f.batId} onChange={e => upd('batId', e.target.value)}>
+            <option value="">— Select bat —</option>
+            {bats.filter(b=>!b.archived).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {/* Outcome picker */}
       <div style={{marginBottom:16}}>
         <label style={{...S.label, display:'block', marginBottom:10}}>Outcome *</label>
-        <div style={S.outGrp}><div style={S.outGrpLabel}>Hits</div><div style={S.outBtns}>{HIT_OUTCOMES.map(o => <OBtn key={o} label={o} group="hit"/>)}</div></div>
-        <div style={S.outGrp}><div style={S.outGrpLabel}>Outs</div><div style={S.outBtns}>{OUT_OUTCOMES.map(o => <OBtn key={o} label={o} group="out"/>)}</div></div>
-        <div style={S.outGrp}><div style={S.outGrpLabel}>Other</div><div style={S.outBtns}>{OTHER_OUTCOMES.map(o => <OBtn key={o} label={o} group="other"/>)}</div></div>
+        <div style={S.outGrp}>
+          <div style={S.outGrpLabel}>Hits</div>
+          <div style={{...S.outBtns, ...(quickMode?{gap:8}:{})}}>{HIT_OUTCOMES.map(o => <OBtn key={o} label={o} group="hit"/>)}</div>
+        </div>
+        <div style={S.outGrp}>
+          <div style={S.outGrpLabel}>Outs</div>
+          <div style={{...S.outBtns, ...(quickMode?{gap:8}:{})}}>{OUT_OUTCOMES.map(o => <OBtn key={o} label={o} group="out"/>)}</div>
+        </div>
+        <div style={S.outGrp}>
+          <div style={S.outGrpLabel}>Other</div>
+          <div style={{...S.outBtns, ...(quickMode?{gap:8}:{})}}>{OTHER_OUTCOMES.map(o => <OBtn key={o} label={o} group="other"/>)}</div>
+        </div>
       </div>
 
       {/* Foul out sub-type */}
@@ -1042,11 +1438,11 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel }) {
         </div>
       )}
 
-      {/* Spray chart */}
-      {showSpray && (
+      {/* Spray chart — hidden in quick mode */}
+      {showSpray && !quickMode && (
         <div style={{...S.formGroup, marginBottom:16}}>
           <label style={S.label}>Hit Location {f.spray ? '✓ placed' : '— tap the field'}</label>
-          <div style={{display:'flex', justifyContent:'center', background:'#eef2ee', borderRadius:10, padding:12, border:'1px solid #e2e8f0'}}>
+          <div style={{display:'flex', justifyContent:'center', background:'var(--spray-bg)', borderRadius:10, padding:12, border:'1px solid var(--border)'}}>
             <SprayChart onPlot={pt => upd('spray', {...pt, w:320, h:281})} plotted={f.spray} interactive={true} size={300}/>
           </div>
           {f.spray && <button onClick={() => upd('spray', null)} style={{...S.btnSmall, marginTop:6, fontSize:11}}>Clear placement</button>}
@@ -1075,34 +1471,39 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel }) {
         </div>
       )}
 
-      {/* Fielding */}
-      <div style={{borderTop:'1px solid #e2e8f0', paddingTop:14, marginBottom:14}}>
-        <div style={{...S.label, marginBottom:10, display:'block'}}>Fielding This AB</div>
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10}}>
-          <div style={S.formGroup}>
-            <label style={S.label}>Position</label>
-            <select style={S.select} value={f.position} onChange={e => upd('position', e.target.value)}>
-              <option value="">—</option>
-              {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+      {/* Fielding — hidden in quick mode */}
+      {!quickMode && (
+        <div style={{borderTop:'1px solid var(--border)', paddingTop:14, marginBottom:14}}>
+          <div style={{...S.label, marginBottom:10, display:'block'}}>Fielding This AB</div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10}}>
+            <div style={S.formGroup}>
+              <label style={S.label}>Position</label>
+              <select style={S.select} value={f.position} onChange={e => upd('position', e.target.value)}>
+                <option value="">—</option>
+                {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div style={S.formGroup}><label style={S.label}>PO</label><input type="number" min="0" style={S.input} value={f.putouts} onChange={e => upd('putouts', parseInt(e.target.value)||0)}/></div>
+            <div style={S.formGroup}><label style={S.label}>A</label><input type="number" min="0" style={S.input} value={f.assists} onChange={e => upd('assists', parseInt(e.target.value)||0)}/></div>
+            <div style={S.formGroup}><label style={S.label}>E</label><input type="number" min="0" style={S.input} value={f.errors} onChange={e => upd('errors', parseInt(e.target.value)||0)}/></div>
           </div>
-          <div style={S.formGroup}><label style={S.label}>PO</label><input type="number" min="0" style={S.input} value={f.putouts} onChange={e => upd('putouts', parseInt(e.target.value)||0)}/></div>
-          <div style={S.formGroup}><label style={S.label}>A</label><input type="number" min="0" style={S.input} value={f.assists} onChange={e => upd('assists', parseInt(e.target.value)||0)}/></div>
-          <div style={S.formGroup}><label style={S.label}>E</label><input type="number" min="0" style={S.input} value={f.errors} onChange={e => upd('errors', parseInt(e.target.value)||0)}/></div>
         </div>
-      </div>
+      )}
 
-      {/* Comments */}
-      <div style={{...S.formGroup, marginBottom:16}}>
-        <label style={S.label}>AB Comments</label>
-        <textarea style={{...S.input, height:65, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Notes about this at bat..."/>
-      </div>
+      {/* Comments — hidden in quick mode */}
+      {!quickMode && (
+        <div style={{...S.formGroup, marginBottom:16}}>
+          <label style={S.label}>AB Comments</label>
+          <textarea style={{...S.input, height:65, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Notes about this at bat..."/>
+        </div>
+      )}
 
       <div style={{display:'flex', gap:10}}>
-        <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)} style={S.btnPrimary}>
-          {isEdit ? 'Save Changes' : 'Record AB'}
+        <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)}
+          style={{...S.btnPrimary, ...(quickMode?{flex:1, padding:'14px 18px', fontSize:15}:{})}}>
+          {isEdit ? 'Save Changes' : quickMode ? 'Save AB' : 'Record AB'}
         </button>
-        <button onClick={onCancel} style={S.btnSecondary}>Cancel</button>
+        <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>
       </div>
       {isFoulOut && !f.subOutcome && <p style={{...S.hint, marginTop:8}}>Select foul out type to continue.</p>}
     </div>
@@ -1110,13 +1511,14 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel }) {
 }
 
 // ─── GAME DETAIL PAGE ──────────────────────────────────────────────────────────
-function GameDetailPage({ uid, gameId, setPage }) {
+function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [game, setGame] = useState(null);
   const [abs, setAbs] = useState([]);
   const [bats, setBats] = useState([]);
   const [profile, setProfile] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [quickMode, setQuickMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingGame, setEditingGame] = useState(false);
   const [gameForm, setGameForm] = useState(null);
@@ -1174,15 +1576,15 @@ function GameDetailPage({ uid, gameId, setPage }) {
   });
   const dirTotal = dirCounts.Pull + dirCounts.Center + dirCounts.Oppo;
 
-  if (!game) return <div style={S.page}><p style={S.muted}>Loading game...</p></div>;
+  if (!game) return <div className="page-content"><p style={S.muted}>Loading game...</p></div>;
 
   return (
-    <div style={S.page}>
+    <div className="page-content">
       {confirmAB && <ConfirmModal message="Delete this at bat?" onConfirm={()=>delAB(confirmAB)} onCancel={()=>setConfirmAB(null)}/>}
       {confirmGame && <ConfirmModal message="Delete this game? All recorded ABs will also be deleted." onConfirm={delGame} onCancel={()=>setConfirmGame(false)}/>}
 
-      <div style={S.pageHeader}>
-        <button onClick={() => setPage('games')} style={S.backBtn}>← Games</button>
+      <div style={S.pageHeader} className="page-header-row">
+        <button onClick={() => setPage(prevPage)} style={S.backBtn}>← {prevPage === 'gamelog' ? 'Game Log' : prevPage === 'stats' ? 'Stats' : 'Games'}</button>
         <div style={{display:'flex', gap:8}}>
           {!editingGame && <button onClick={()=>setEditingGame(true)} style={S.btnSmall}>Edit Game</button>}
           {!editingGame && abs.length>0 && <button onClick={()=>generateGamePDF(game,abs,profile)} style={S.btnSmall}>↓ PDF</button>}
@@ -1197,7 +1599,7 @@ function GameDetailPage({ uid, gameId, setPage }) {
             <div style={S.cardTitle}>Edit Game Info</div>
             <button onClick={()=>setEditingGame(false)} style={S.btnSmall}>Cancel</button>
           </div>
-          <div style={S.formGrid2}>
+          <div style={S.formGrid2} className="form-grid-2">
             <div style={S.formGroup}>
               <label style={S.label}>Date *</label>
               <input type="date" style={S.input} value={gameForm.date||''} onChange={e=>updGame('date',e.target.value)}/>
@@ -1293,7 +1695,7 @@ function GameDetailPage({ uid, gameId, setPage }) {
       {abs.length > 0 && (
         <div style={S.card}>
           <div style={S.cardTitle}>Game Stats</div>
-          <div style={S.statsGrid}>
+          <div style={S.statsGrid} className="stats-grid-5">
             {[['PA',stats.pa],['AB',stats.ab],['H',stats.h],['R',stats.r],['RBI',stats.rbi],
               ['2B',stats.doubles],['3B',stats.triples],['HR',stats.hr],['BB',stats.bb],['K',stats.kTotal]].map(([l,v]) => (
               <div key={l} style={S.statCell}><div style={S.statLabel}>{l}</div><div style={S.statVal}>{v}</div></div>
@@ -1323,15 +1725,15 @@ function GameDetailPage({ uid, gameId, setPage }) {
         <div style={S.card}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
             <div style={S.cardTitle}>Spray Chart — This Game</div>
-            <div style={{display:'flex', gap:6}}>
-              {[['Spray', false],['Heat', true]].map(([label, hm]) => (
-                <button key={label} onClick={()=>setShowHeatmap(hm)}
-                  style={{...S.btnSmall,...(showHeatmap===hm?{background:'#1e3a5f',color:'#fff',borderColor:'#1e3a5f',fontWeight:700}:{})}}>{label}</button>
+            <div style={{display:'flex', gap:4}}>
+              {[['Spray', 'spray'],['Heat', 'heat'],['Zones', 'zones']].map(([label, val]) => (
+                <button key={val} onClick={()=>setShowHeatmap(val)}
+                  style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{label}</button>
               ))}
             </div>
           </div>
-          <div style={{display:'flex', justifyContent:'center', background:'#eef2ee', borderRadius:10, padding:12}}>
-            <SprayChart interactive={false} hits={sprayHits} size={300} showHeatmap={showHeatmap} handedness={handedness}/>
+          <div style={{display:'flex', justifyContent:'center', background:'var(--spray-bg)', borderRadius:10, padding:12}}>
+            <SprayChart interactive={false} hits={sprayHits} size={300} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} handedness={handedness}/>
           </div>
           <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
             {sprayHits.length} charted {sprayHits.length===1?'ball':'balls'} · <span style={{color:'#276749'}}>●</span> Hit · <span style={{color:'#c53030'}}>●</span> Out/Other
@@ -1361,14 +1763,17 @@ function GameDetailPage({ uid, gameId, setPage }) {
       {/* At Bats */}
       <div style={S.card}>
         <div style={{...S.pageHeader, marginBottom:14}}>
-          <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'#718096', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
+          <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
           {!showForm && !editId && (
-            <button onClick={() => setShowForm(true)} style={S.btnPrimary}>+ Add AB</button>
+            <div style={{display:'flex', gap:6}}>
+              <button onClick={()=>{setQuickMode(false);setShowForm(true);}} style={S.btnSmall}>+ Full AB</button>
+              <button onClick={()=>{setQuickMode(true);setShowForm(true);}} style={{...S.btnPrimary, padding:'5px 12px', fontSize:12}}>⚡ Quick AB</button>
+            </div>
           )}
         </div>
 
         {showForm && (
-          <ABForm uid={uid} gameId={gameId} bats={bats}
+          <ABForm uid={uid} gameId={gameId} bats={bats} quickMode={quickMode}
             onSave={() => { setShowForm(false); loadABs(); }}
             onCancel={() => setShowForm(false)}/>
         )}
@@ -1376,7 +1781,7 @@ function GameDetailPage({ uid, gameId, setPage }) {
         {loading ? <p style={S.muted}>Loading...</p> : abs.length === 0 && !showForm ? (
           <div style={{...S.empty, padding:'28px 0'}}>
             <p>No at bats recorded yet.</p>
-            <button onClick={() => setShowForm(true)} style={{...S.btnPrimary, marginTop:12}}>Record first AB</button>
+            <button onClick={() => { setQuickMode(true); setShowForm(true); }} style={{...S.btnPrimary, marginTop:12}}>⚡ Quick AB</button>
           </div>
         ) : (
           <div style={S.list}>
@@ -1389,16 +1794,31 @@ function GameDetailPage({ uid, gameId, setPage }) {
               );
               const label = ab.outcome + (ab.outcome === 'Foul Out' ? (ab.subOutcome === 'caught' ? ' (caught)' : ab.subOutcome === 'strikeout' ? ' (K)' : '') : '');
               const dir = ab.spray && COUNTS_AS_HIT.has(ab.outcome) ? getHitDirection(ab.spray, handedness) : null;
+              const moveAB = async (fromIdx, toIdx) => {
+                if (toIdx < 0 || toIdx >= abs.length) return;
+                // Swap timestamps to reorder
+                const a = abs[fromIdx], b = abs[toIdx];
+                const tsA = a.timestamp, tsB = b.timestamp;
+                await Promise.all([
+                  absCol(uid, gameId).doc(a.id).update({timestamp: tsB}),
+                  absCol(uid, gameId).doc(b.id).update({timestamp: tsA}),
+                ]);
+                loadABs();
+              };
               return (
                 <div key={ab.id} style={S.listItem}>
-                  <div style={{width:28, height:28, borderRadius:7, background:color+'18', color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, flexShrink:0}}>{i+1}</div>
+                  <div style={{display:'flex', flexDirection:'column', gap:2, flexShrink:0, marginRight:4}}>
+                    <button onClick={() => moveAB(i, i-1)} disabled={i===0} style={{background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:12, padding:'1px 4px', lineHeight:1}}>▲</button>
+                    <div style={{width:24, height:24, borderRadius:7, background:color+'18', color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700}}>{i+1}</div>
+                    <button onClick={() => moveAB(i, i+1)} disabled={i===abs.length-1} style={{background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:12, padding:'1px 4px', lineHeight:1}}>▼</button>
+                  </div>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
                       <span style={{fontWeight:600, color, fontSize:13}}>{label}</span>
                       {ab.rbi > 0 && <span style={S.badge}>{ab.rbi} RBI</span>}
                       {ab.runScored && <span style={S.badge}>R</span>}
-                      {dir && <span style={{...S.badge, color:'#1e3a5f'}}>{dir}</span>}
-                      {ab.spray && <span style={{...S.badge, color:'#276749'}}>📍</span>}
+                      {dir && <span style={{...S.badge, color:'var(--primary)'}}>{dir}</span>}
+                      {ab.spray && <span style={{...S.badge, color:'var(--success)'}}>📍</span>}
                     </div>
                     <div style={S.listSub}>
                       {[ab.batName, ab.position, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
@@ -1437,10 +1857,10 @@ function ConfirmModal({ message, onConfirm, onCancel, confirmLabel='Delete', con
 
 function ComingSoon({ title }) {
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}><h2 style={S.pageTitle}>{title}</h2></div>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>{title}</h2></div>
       <div style={S.card}>
-        <div style={{textAlign:'center', padding:'40px 0', color:'#a0aec0'}}>
+        <div style={{textAlign:'center', padding:'40px 0', color:'var(--muted)'}}>
           <div style={{marginBottom:12}}><i className="fa-solid fa-hammer" style={{fontSize:28, color:'#cbd5e0'}}></i></div>
           <p style={{color:'#718096'}}>Coming in a future phase.</p>
         </div>
@@ -1452,14 +1872,23 @@ function ComingSoon({ title }) {
 // ─── SEASONS PAGE ──────────────────────────────────────────────────────────────
 function SeasonsPage({ uid }) {
   const [seasons, setSeasons] = useState([]);
+  const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null); // null | 'new' | id
+  const [editing, setEditing] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
   const blank = { name:'', teamName:'', league:'', tier:'', notes:'' };
   const [form, setForm] = useState(blank);
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
 
-  const load = () => seasonsCol(uid).orderBy('createdAt','desc').get()
-    .then(s => { setSeasons(s.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false); });
+  const load = async () => {
+    const [seasSnap, gamesSnap] = await Promise.all([
+      seasonsCol(uid).orderBy('createdAt','desc').get(),
+      gamesCol(uid).get()
+    ]);
+    setSeasons(seasSnap.docs.map(d=>({id:d.id,...d.data()})));
+    setGames(gamesSnap.docs.map(d=>({id:d.id,...d.data()})));
+    setLoading(false);
+  };
 
   useEffect(() => { load(); }, [uid]);
 
@@ -1474,18 +1903,17 @@ function SeasonsPage({ uid }) {
   };
 
   const del = async id => {
-    if (!confirm('Delete this season? Your games will not be affected.')) return;
-    await seasonsCol(uid).doc(id).delete(); load();
+    await seasonsCol(uid).doc(id).delete(); setConfirmDel(null); load();
   };
 
   if (editing !== null) return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row">
         <button onClick={() => setEditing(null)} style={S.backBtn}>← Seasons</button>
         <h2 style={S.pageTitle}>{editing === 'new' ? 'New Season' : 'Edit Season'}</h2>
       </div>
       <div style={S.card}>
-        <div style={S.formGrid2}>
+        <div style={S.formGrid2} className="form-grid-2">
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Season Name *</label>
             <input style={S.input} value={form.name} onChange={e=>upd('name',e.target.value)} placeholder="e.g. 2026 Sluggers"/>
@@ -1516,16 +1944,16 @@ function SeasonsPage({ uid }) {
   );
 
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      {confirmDel && <ConfirmModal message="Delete this season? Your games will not be affected." onConfirm={()=>del(confirmDel)} onCancel={()=>setConfirmDel(null)}/>}
+      <div style={S.pageHeader} className="page-header-row">
         <h2 style={S.pageTitle}>Seasons</h2>
         <button onClick={startNew} style={S.btnPrimary}>+ New Season</button>
       </div>
       <p style={{...S.muted, marginBottom:16}}>Seasons let you quickly fill in team info when recording a new game.</p>
       {loading ? <p style={S.muted}>Loading...</p> : seasons.length === 0 ? (
         <div style={S.empty}>
-          <p style={{marginBottom:14}}>No seasons yet.</p>
-          <button onClick={startNew} style={S.btnPrimary}>Create your first season</button>
+          <p>No seasons yet.</p>
         </div>
       ) : (
         <div style={S.list}>
@@ -1536,11 +1964,24 @@ function SeasonsPage({ uid }) {
                 <div style={S.listSub}>
                   {[s.teamName, s.league, s.tier].filter(Boolean).join(' · ')}
                 </div>
+                {(() => {
+                  const sg = games.filter(g => (g.season||'') === s.name);
+                  const w = sg.filter(g => getResult(g)?.label==='W').length;
+                  const l = sg.filter(g => getResult(g)?.label==='L').length;
+                  const t = sg.filter(g => getResult(g)?.label==='T').length;
+                  if (!sg.length) return <div style={{...S.hint, marginTop:4}}>No games recorded yet</div>;
+                  return (
+                    <div style={{marginTop:5, display:'flex', alignItems:'center', gap:10}}>
+                      <span style={{fontSize:12, color:'var(--muted)', fontWeight:600}}>{sg.length} game{sg.length!==1?'s':''}</span>
+                      {(w+l+t>0) && <span style={{fontSize:12}}><span style={{color:'var(--success)',fontWeight:700}}>{w}W</span>{' '}<span style={{color:'var(--muted)'}}>·</span>{' '}<span style={{color:'var(--danger)',fontWeight:700}}>{l}L</span>{t>0&&<>{' '}<span style={{color:'var(--muted)'}}>·</span>{' '}<span style={{color:'#b7791f',fontWeight:700}}>{t}T</span></>}</span>}
+                    </div>
+                  );
+                })()}
                 {s.notes && <div style={{...S.hint, marginTop:4, fontStyle:'italic'}}>{s.notes}</div>}
               </div>
               <div style={{display:'flex', gap:8, flexShrink:0}}>
                 <button onClick={()=>startEdit(s)} style={S.btnSmall}>Edit</button>
-                <button onClick={()=>del(s.id)} style={S.btnDanger}>Delete</button>
+                <button onClick={()=>setConfirmDel(s.id)} style={S.btnDanger}>Delete</button>
               </div>
             </div>
           ))}
@@ -1730,6 +2171,7 @@ function StatsPage({ uid }) {
   const { games, allABs, profile, loading } = useAllData(uid);
   const [sprayFilter, setSprayFilter] = useState('all');
   const [sprayScope,  setSprayScope]  = useState('career');
+  const [sprayView,   setSprayView]   = useState('spray'); // 'spray'|'heat'|'zones'
   const [activeSeason, setActiveSeason] = useState('');
   const inclFoulK = profile.includeKFoulInK || false;
 
@@ -1822,9 +2264,9 @@ function StatsPage({ uid }) {
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <thead>
               <tr style={{background:'#f7fafc'}}>
-                <th style={{padding:'8px 12px',textAlign:'left',fontSize:10,fontWeight:700,color:'#a0aec0',textTransform:'uppercase',letterSpacing:'0.06em',position:'sticky',left:0,background:'#f7fafc',zIndex:1}}>Period</th>
+                <th style={{padding:'8px 12px',textAlign:'left',fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',position:'sticky',left:0,background:'#f7fafc',zIndex:1}}>Period</th>
                 {(view==='totals'?STAT_HEADS:PG_HEADS).map(h=>(
-                  <th key={h} style={{padding:'8px 10px',textAlign:'center',fontSize:10,fontWeight:700,color:'#a0aec0',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+                  <th key={h} style={{padding:'8px 10px',textAlign:'center',fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1841,7 +2283,7 @@ function StatsPage({ uid }) {
                 <thead>
                   <tr style={{background:'#f7fafc'}}>
                     {['Pos','G','PO','A','E','FLD%'].map(h=>(
-                      <th key={h} style={{padding:'6px 12px',textAlign:h==='Pos'?'left':'center',fontSize:10,fontWeight:700,color:'#a0aec0',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>
+                      <th key={h} style={{padding:'6px 12px',textAlign:h==='Pos'?'left':'center',fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1865,8 +2307,8 @@ function StatsPage({ uid }) {
     );
   }
 
-  if (loading) return <div style={S.page}><div style={S.pageHeader}><h2 style={S.pageTitle}>Stats</h2></div><p style={S.muted}>Loading...</p></div>;
-  if (!games.length) return <div style={S.page}><div style={S.pageHeader}><h2 style={S.pageTitle}>Stats</h2></div><div style={S.empty}><p>No games recorded yet.</p></div></div>;
+  if (loading) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Stats</h2></div><p style={S.muted}>Loading...</p></div>;
+  if (!games.length) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Stats</h2></div><div style={S.empty}><p>No games recorded yet.</p></div></div>;
 
   const last7=games.filter(g=>g.date>=daysAgo(7)), last14=games.filter(g=>g.date>=daysAgo(14)), last30=games.filter(g=>g.date>=daysAgo(30));
   const recentRows=[{label:'Last 7 Days',st:agg(last7)},{label:'Last 14 Days',st:agg(last14)},{label:'Last 30 Days',st:agg(last30)}].filter(r=>r.st.g>0);
@@ -1906,9 +2348,47 @@ function StatsPage({ uid }) {
     {label:'AVG (game, 3+ AB)', val:highs.bestAVG||'—', sub:highs.bestAVGDate},
   ].filter(h=>h.val && h.val!=='0' && h.val!=='—' && h.val!=='0G');
 
+  // Month-over-month comparison
+  const momCallout = (() => {
+    if (byMonth.length < 2) return null;
+    const sorted = [...byMonth].sort((a,b) => b[0].localeCompare(a[0]));
+    const thisMonth = agg(sorted[0][1]);
+    const lastMonth = agg(sorted[1][1]);
+    if (thisMonth.ab < 3 || lastMonth.ab < 3) return null;
+    const thisAvg = thisMonth.h / thisMonth.ab;
+    const lastAvg = lastMonth.h / lastMonth.ab;
+    const diff = thisAvg - lastAvg;
+    if (Math.abs(diff) < 0.01) return null;
+    const diffStr = (diff > 0 ? '+' : '') + Math.round(diff * 1000).toString().padStart(diff < 0 ? 4 : 3, '0');
+    const [yr0,mo0] = sorted[0][0].split('-');
+    const [yr1,mo1] = sorted[1][0].split('-');
+    const label0 = new Date(parseInt(yr0),parseInt(mo0)-1,1).toLocaleDateString('en-CA',{month:'short'});
+    const label1 = new Date(parseInt(yr1),parseInt(mo1)-1,1).toLocaleDateString('en-CA',{month:'short'});
+    return { diff, diffStr, label0, label1, thisAvg: calcAVG(thisMonth.h, thisMonth.ab), lastAvg: calcAVG(lastMonth.h, lastMonth.ab) };
+  })();
+
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}><h2 style={S.pageTitle}>Stats</h2></div>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Stats</h2></div>
+
+      {/* Month-over-month callout */}
+      {momCallout && (
+        <div style={{...S.card, background: momCallout.diff > 0 ? 'rgba(39,103,73,0.08)' : 'rgba(197,48,48,0.08)', border:`1px solid ${momCallout.diff>0?'var(--success)':'var(--danger)'}`, marginBottom:16}}>
+          <div style={{display:'flex', alignItems:'center', gap:12}}>
+            <div style={{fontSize:24, fontWeight:700, color: momCallout.diff>0?'var(--success)':'var(--danger)'}}>
+              {momCallout.diffStr}
+            </div>
+            <div>
+              <div style={{fontSize:13, fontWeight:600, color:'var(--text)'}}>
+                AVG {momCallout.diff>0?'up':'down'} vs last month
+              </div>
+              <div style={{fontSize:12, color:'var(--muted)'}}>
+                {momCallout.label0}: {momCallout.thisAvg} · {momCallout.label1}: {momCallout.lastAvg}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Career Highs */}
       {highItems.length>0 && (
@@ -1938,7 +2418,7 @@ function StatsPage({ uid }) {
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
               <div style={{display:'flex',gap:4}}>
                 {[['career','Career'],['season','Season']].map(([v,l])=>(
-                  <button key={v} onClick={()=>setSprayScope(v)} style={{...S.btnSmall,...(sprayScope===v?{background:'#1e3a5f',color:'#fff',borderColor:'#1e3a5f',fontWeight:700}:{})}}>{l}</button>
+                  <button key={v} onClick={()=>setSprayScope(v)} style={{...S.btnSmall,...(sprayScope===v?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{l}</button>
                 ))}
               </div>
               {sprayScope==='season'&&seasons.length>1&&(
@@ -1947,21 +2427,26 @@ function StatsPage({ uid }) {
                 </select>
               )}
               <div style={{display:'flex',gap:4}}>
+                {[['spray','Spray'],['heat','Heat'],['zones','Zones']].map(([v,l])=>(
+                  <button key={v} onClick={()=>setSprayView(v)} style={{...S.btnSmall,...(sprayView===v?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{l}</button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:4}}>
                 {[['all','All'],['hits','Hits Only']].map(([v,l])=>(
-                  <button key={v} onClick={()=>setSprayFilter(v)} style={{...S.btnSmall,...(sprayFilter===v?{background:'#1e3a5f',color:'#fff',borderColor:'#1e3a5f',fontWeight:700}:{})}}>{l}</button>
+                  <button key={v} onClick={()=>setSprayFilter(v)} style={{...S.btnSmall,...(sprayFilter===v?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{l}</button>
                 ))}
               </div>
             </div>
           </div>
           {sprayFiltered.length===0?<p style={{...S.muted,textAlign:'center',padding:'20px 0'}}>No charted balls for this selection.</p>:(
             <>
-              <div style={{display:'flex',justifyContent:'center',background:'#f0f4f0',borderRadius:10,padding:12}}>
-                <SprayChart interactive={false} hits={sprayFiltered} size={360}/>
+              <div style={{display:'flex',justifyContent:'center',background:'var(--spray-bg)',borderRadius:10,padding:12}}>
+                <SprayChart interactive={false} hits={sprayFiltered} size={360} showHeatmap={sprayView==='heat'} showZones={sprayView==='zones'}/>
               </div>
               <p style={{...S.hint,marginTop:8,textAlign:'center'}}>
                 {sprayFiltered.length} charted {sprayFiltered.length===1?'ball':'balls'} · {sprayScope==='season'?effectiveSeason:'Career'}
-                {' · '}<span style={{color:'#276749'}}>●</span> Hit
-                {sprayFilter==='all'&&<> · <span style={{color:'#c53030'}}>●</span> Out/Other</>}
+                {' · '}<span style={{color:'var(--success)'}}>●</span> Hit
+                {sprayFilter==='all'&&<> · <span style={{color:'var(--danger)'}}>●</span> Out/Other</>}
               </p>
             </>
           )}
@@ -1986,6 +2471,8 @@ function GameLogPage({ uid, setPage, setGameId }) {
   const [showFB, setShowFB] = useState(true);
   const [sprayFA, setSprayFA] = useState('all');
   const [sprayFB, setSprayFB] = useState('all');
+  const [sprayVA, setSprayVA] = useState('spray'); // spray|heat|zones
+  const [sprayVB, setSprayVB] = useState('spray');
   const [filtersLoaded, setFiltersLoaded] = useState(false);
 
   // Load saved filters on mount
@@ -2037,7 +2524,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
   const sprayB=sprayFB==='hits'?sprayABsB.filter(ab=>COUNTS_AS_HIT.has(ab.outcome)):sprayABsB;
 
   const go = id => { setGameId(id); setPage('game-detail'); };
-  const thS={padding:'9px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'#a0aec0',textTransform:'uppercase',letterSpacing:'0.05em',cursor:'pointer',whiteSpace:'nowrap',userSelect:'none'};
+  const thS={padding:'9px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.05em',cursor:'pointer',whiteSpace:'nowrap',userSelect:'none'};
   const tdS={padding:'10px 10px',textAlign:'center',fontSize:13,color:'#4a5568',borderBottom:'1px solid #f0f2f5'};
 
   const compareStats=[
@@ -2058,11 +2545,11 @@ function GameLogPage({ uid, setPage, setGameId }) {
     return null;
   };
 
-  if(loading) return <div style={S.page}><div style={S.pageHeader}><h2 style={S.pageTitle}>Game Log</h2></div><p style={S.muted}>Loading...</p></div>;
+  if(loading) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Game Log</h2></div><p style={S.muted}>Loading...</p></div>;
 
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row">
         <h2 style={S.pageTitle}>Game Log</h2>
         <div style={{display:'flex',gap:8}}>
           {[['log','☰ Log'],['compare','⇄ Compare']].map(([m,l])=>(
@@ -2111,7 +2598,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
                 <div style={{display:'flex',gap:16,marginTop:8,fontSize:12}}>
                   <span><span style={{color:'#276749',fontWeight:700}}>■</span> Hits {hitPct}%</span>
                   <span><span style={{color:'#c53030',fontWeight:700}}>■</span> Ks {kPct}%</span>
-                  <span><span style={{color:'#a0aec0',fontWeight:700}}>■</span> Other {otherPct}%</span>
+                  <span><span style={{color:'var(--muted)',fontWeight:700}}>■</span> Other {otherPct}%</span>
                 </div>
               </div>
             )}
@@ -2144,10 +2631,10 @@ function GameLogPage({ uid, setPage, setGameId }) {
                         onMouseLeave={e=>e.currentTarget.style.background=''}>
                         <td style={{...tdS,textAlign:'left',paddingLeft:14,whiteSpace:'nowrap'}}>
                           <div style={{fontWeight:600,color:'#1a202c'}}>{fmtDate(game.date)}</div>
-                          <div style={{fontSize:11,color:'#a0aec0'}}>{[game.teamName,game.league,game.season].filter(Boolean).join(' · ')}</div>
+                          <div style={{fontSize:11,color:'var(--muted)'}}>{[game.teamName,game.league,game.season].filter(Boolean).join(' · ')}</div>
                         </td>
                         <td style={{...tdS,textAlign:'left',fontWeight:500,color:'#1a202c'}}>
-                          {game.opponent||'—'}{game.park&&<div style={{fontSize:11,color:'#a0aec0'}}>{game.park}</div>}
+                          {game.opponent||'—'}{game.park&&<div style={{fontSize:11,color:'var(--muted)'}}>{game.park}</div>}
                         </td>
                         <td style={tdS}>{res?<span style={{background:res.color+'18',color:res.color,borderRadius:6,padding:'3px 8px',fontWeight:700,fontSize:12}}>{res.label} {game.myScore}–{game.oppScore}</span>:'—'}</td>
                         <td style={tdS}>{s.ab}</td>
@@ -2172,7 +2659,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
               {label:'Set B',f:filtersB,sf:setFiltersB,show:showFB,setShow:setShowFB,set:setB,color:'#276749'}].map(({label,f,sf,show,setShow,set,color})=>(
               <div key={label} style={{...S.card,borderTop:`3px solid ${color}`}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                  <div style={{fontWeight:700,color,fontSize:15}}>{label} <span style={{fontWeight:400,color:'#a0aec0',fontSize:13}}>({set.length} game{set.length!==1?'s':''})</span></div>
+                  <div style={{fontWeight:700,color,fontSize:15}}>{label} <span style={{fontWeight:400,color:'var(--muted)',fontSize:13}}>({set.length} game{set.length!==1?'s':''})</span></div>
                   <button onClick={()=>setShow(v=>!v)} style={{...S.btnSmall,fontSize:11}}>
                     {show?'Hide':'Show'} Filters {countFilters(f)>0&&<span style={{background:color,color:'#fff',borderRadius:10,padding:'1px 6px',fontSize:10,marginLeft:4}}>{countFilters(f)}</span>}
                   </button>
@@ -2186,7 +2673,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
             <div style={{overflowX:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                 <thead><tr style={{background:'#f7fafc'}}>
-                  <th style={{padding:'8px 12px',textAlign:'left',fontSize:10,fontWeight:700,color:'#a0aec0',textTransform:'uppercase',letterSpacing:'0.06em'}}>Stat</th>
+                  <th style={{padding:'8px 12px',textAlign:'left',fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Stat</th>
                   <th style={{padding:'8px 14px',textAlign:'center',fontSize:12,fontWeight:700,color:'#1e3a5f'}}>Set A</th>
                   <th style={{padding:'8px 14px',textAlign:'center',fontSize:12,fontWeight:700,color:'#276749'}}>Set B</th>
                 </tr></thead>
@@ -2208,12 +2695,15 @@ function GameLogPage({ uid, setPage, setGameId }) {
             </div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-            {[{label:'Set A',sp:sprayA,sab:sprayABsA,spf:sprayFA,sspf:setSprayFA,color:'#1e3a5f'},
-              {label:'Set B',sp:sprayB,sab:sprayABsB,spf:sprayFB,sspf:setSprayFB,color:'#276749'}].map(({label,sp,spf,sspf,color})=>(
+            {[{label:'Set A',sp:sprayA,sab:sprayABsA,spf:sprayFA,sspf:setSprayFA,spv:sprayVA,sspv:setSprayVA,color:'#1e3a5f'},
+              {label:'Set B',sp:sprayB,sab:sprayABsB,spf:sprayFB,sspf:setSprayFB,spv:sprayVB,sspv:setSprayVB,color:'#276749'}].map(({label,sp,spf,sspf,spv,sspv,color})=>(
               <div key={label} style={S.card}>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,flexWrap:'wrap',gap:6}}>
                   <div style={{...S.cardTitle,marginBottom:0}}>{label} — Spray Chart</div>
-                  <div style={{display:'flex',gap:4}}>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                    {[['spray','Spray'],['heat','Heat'],['zones','Zones']].map(([v,l])=>(
+                      <button key={v} onClick={()=>sspv(v)} style={{...S.btnSmall,fontSize:11,...(spv===v?{background:color,color:'#fff',borderColor:color}:{})}}>{l}</button>
+                    ))}
                     {[['all','All'],['hits','Hits']].map(([v,l])=>(
                       <button key={v} onClick={()=>sspf(v)} style={{...S.btnSmall,fontSize:11,...(spf===v?{background:color,color:'#fff',borderColor:color}:{})}}>{l}</button>
                     ))}
@@ -2221,8 +2711,8 @@ function GameLogPage({ uid, setPage, setGameId }) {
                 </div>
                 {sp.length===0?<p style={{...S.muted,textAlign:'center',padding:'20px 0'}}>No charted balls.</p>:(
                   <>
-                    <div style={{display:'flex',justifyContent:'center',background:'#f0f4f0',borderRadius:8,padding:8}}>
-                      <SprayChart interactive={false} hits={sp} size={260}/>
+                    <div style={{display:'flex',justifyContent:'center',background:'var(--spray-bg)',borderRadius:8,padding:8}}>
+                      <SprayChart interactive={false} hits={sp} size={260} showHeatmap={spv==='heat'} showZones={spv==='zones'}/>
                     </div>
                     <p style={{...S.hint,marginTop:6,textAlign:'center'}}>{sp.length} ball{sp.length!==1?'s':''}</p>
                   </>
@@ -2351,12 +2841,12 @@ function TrendsPage({ uid }) {
     );
   }
 
-  if(loading) return <div style={S.page}><div style={S.pageHeader}><h2 style={S.pageTitle}>Trends</h2></div><p style={S.muted}>Loading...</p></div>;
-  if(games.length<2) return <div style={S.page}><div style={S.pageHeader}><h2 style={S.pageTitle}>Trends</h2></div><div style={S.empty}><p>Record at least 2 games to see trends.</p></div></div>;
+  if(loading) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Trends</h2></div><p style={S.muted}>Loading...</p></div>;
+  if(games.length<2) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Trends</h2></div><div style={S.empty}><p>Record at least 2 games to see trends.</p></div></div>;
 
   return (
-    <div style={S.page}>
-      <div style={S.pageHeader}>
+    <div className="page-content">
+      <div style={S.pageHeader} className="page-header-row">
         <h2 style={S.pageTitle}>Trends</h2>
         <button onClick={()=>setShowFilters(v=>!v)} style={{...S.btnSecondary,display:'flex',alignItems:'center',gap:6,fontSize:12}}>
           <i className="fa-solid fa-filter" style={{fontSize:10}}></i>
@@ -2377,7 +2867,7 @@ function TrendsPage({ uid }) {
         <div style={S.card}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
             <div style={S.cardTitle}>{metric.label} Over Time</div>
-            <span style={{fontSize:12,color:'#a0aec0'}}>{filtered.length} games</span>
+            <span style={{fontSize:12,color:'var(--muted)'}}>{filtered.length} games</span>
           </div>
           <LineChart points={dataPoints} rolling={rolling} metric={metric}/>
         </div>
@@ -2387,7 +2877,7 @@ function TrendsPage({ uid }) {
             <table style={{borderCollapse:'collapse',fontSize:13,width:'100%'}}>
               <thead><tr style={{background:'#f7fafc'}}>
                 {['Date','Opponent','AB','H','AVG','OBP','SLG','OPS','HR','RBI','R','BB','K','Run Diff'].map(h=>(
-                  <th key={h} style={{padding:'8px 10px',textAlign:h==='Date'||h==='Opponent'?'left':'center',fontSize:10,fontWeight:700,color:'#a0aec0',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
+                  <th key={h} style={{padding:'8px 10px',textAlign:h==='Date'||h==='Opponent'?'left':'center',fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -2498,6 +2988,15 @@ function App() {
   const [page, setPage] = useState('games');
   const [gameId, setGameId] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [prevPage, setPrevPage] = useState('games'); // breadcrumb
+
+  // Smart setPage that tracks where we came from
+  const navigate = (newPage) => {
+    if (newPage === 'game-detail') {
+      setPrevPage(page === 'new-game' ? 'games' : page);
+    }
+    setPage(newPage);
+  };
 
   useEffect(() => { return auth.onAuthStateChanged(u => setUser(u ?? null)); }, []);
 
@@ -2531,15 +3030,15 @@ function App() {
 
   return (
     <div style={{display:'flex', minHeight:'100vh', background:'var(--bg)'}}>
-      <Sidebar page={navPage} setPage={setPage} user={user}/>
-      <div style={S.mainWrap} className="main-wrap">
-        {page === 'games'       && <GamesPage uid={uid} setPage={setPage} setGameId={setGameId}/>}
-        {page === 'new-game'    && <NewGamePage uid={uid} setPage={setPage} setGameId={setGameId}/>}
-        {page === 'game-detail' && <GameDetailPage uid={uid} gameId={gameId} setPage={setPage}/>}
+      <Sidebar page={navPage} setPage={navigate} user={user}/>
+      <div className="main-wrap">
+        {page === 'games'       && <GamesPage uid={uid} setPage={navigate} setGameId={setGameId}/>}
+        {page === 'new-game'    && <NewGamePage uid={uid} setPage={navigate} setGameId={setGameId}/>}
+        {page === 'game-detail' && <GameDetailPage uid={uid} gameId={gameId} setPage={navigate} prevPage={prevPage}/>}
         {page === 'bats'        && <BatsPage uid={uid}/>}
         {page === 'profile'     && <ProfilePage uid={uid} darkMode={darkMode} toggleDark={toggleDark}/>}
         {page === 'stats'       && <StatsPage uid={uid}/>}
-        {page === 'gamelog'     && <GameLogPage uid={uid} setPage={setPage} setGameId={setGameId}/>}
+        {page === 'gamelog'     && <GameLogPage uid={uid} setPage={navigate} setGameId={setGameId}/>}
         {page === 'trends'      && <TrendsPage uid={uid}/>}
         {page === 'seasons'     && <SeasonsPage uid={uid}/>}
       </div>
