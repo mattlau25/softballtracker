@@ -511,7 +511,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     return (
       <div style={{position:'relative', width:'100%', userSelect:'none'}}>
         <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
-        <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
+        <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
           {grid.flatMap((row,ri) => row.map((val,ci) => {
             if (!val) return null;
             return <rect key={`h${ri}-${ci}`} x={ci*cw} y={ri*ch} width={cw} height={ch} fill={`rgba(220,50,50,${(val/max)*0.7})`}/>;
@@ -525,7 +525,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     <div style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none'}}
       onClick={handleClick}>
       <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
-      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
+      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
         {visibleHits.map((h,i) => {
           const p = toPx(h);
           return <line key={`l${i}`} x1={HOME_PX} y1={HOME_PY} x2={p.x} y2={p.y}
@@ -2011,7 +2011,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
         )}
         {!abCollapsed && !loading && abs.length > 0 && (
-          <div style={S.list}>
+          <div style={{...S.list, marginTop: showForm || editId ? 16 : 0}}>
             {abs.map((ab, i) => {
               const color = abOutcomeColor(ab);
               if (editId === ab.id) return (
