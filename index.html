@@ -1984,8 +1984,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div style={S.card}>
         <div style={{...S.pageHeader, marginBottom: abCollapsed ? 0 : 14}}>
           <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setAbCollapsed(c=>!c)}>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, marginTop:1}}></i>
-            <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1}}></i>
+            <div style={{...S.sectionTitle, marginBottom:0}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
           </div>
           {!abCollapsed && !showForm && !editId && (
             <div style={{display:'flex', gap:6}}>
@@ -2077,8 +2077,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         <div style={{...S.card, marginTop:16}}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: sprayCollapsed ? 0 : 12}}>
             <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-              <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, marginTop:1}}></i>
-              <div style={S.sectionTitle}>Spray Chart</div>
+              <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1}}></i>
+              <div style={{...S.sectionTitle, marginBottom:0}}>Spray Chart</div>
             </div>
             {!sprayCollapsed && (
               <div style={{display:'flex', gap:6, alignItems:'center'}}>
@@ -2128,8 +2128,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div style={{...S.card, marginTop:16}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: fieldingCollapsed ? 0 : (showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0))}}>
           <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setFieldingCollapsed(c=>!c)}>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, marginTop:1}}></i>
-            <div style={S.sectionTitle}>Fielding</div>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1}}></i>
+            <div style={{...S.sectionTitle, marginBottom:0}}>Fielding</div>
           </div>
           {!fieldingCollapsed && !showFieldingForm && (
             <button onClick={()=>{setShowFieldingForm(true);setEditFieldingId(null);setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''}); }} style={S.btnPrimary}>+ Record Fielding</button>
