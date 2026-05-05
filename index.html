@@ -711,7 +711,7 @@ function NavIcon({ id }) {
   if (id === 'profile') return <svg {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
   return null;
 }
-function Sidebar({ page, setPage, user }) {
+function Sidebar({ page, setPage, user, pageToPath }) {
   return (
     <nav className="nav-sidebar">
       <div className="nav-brand">
@@ -720,22 +720,26 @@ function Sidebar({ page, setPage, user }) {
       </div>
       <div className="nav-items">
         {NAV.map(n => (
-          <button key={n.id} onClick={() => setPage(n.id)}
-            className={`nav-item${page.startsWith(n.id) ? ' nav-item-active' : ''}`}>
+          <a key={n.id} href={pageToPath(n.id)}
+            onClick={e => { e.preventDefault(); setPage(n.id); }}
+            className={`nav-item${page.startsWith(n.id) ? ' nav-item-active' : ''}`}
+            style={{textDecoration:'none'}}>
             <span style={{width:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
               <NavIcon id={n.id}/>
             </span>
             <span>{n.label}</span>
-          </button>
+          </a>
         ))}
         {/* Profile — desktop sidebar only */}
-        <button onClick={() => setPage('profile')}
-          className={`nav-item nav-profile-desktop${page === 'profile' ? ' nav-item-active' : ''}`}>
+        <a href={pageToPath('profile')}
+          onClick={e => { e.preventDefault(); setPage('profile'); }}
+          className={`nav-item nav-profile-desktop${page === 'profile' ? ' nav-item-active' : ''}`}
+          style={{textDecoration:'none'}}>
           <span style={{width:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
             <NavIcon id="profile"/>
           </span>
           <span>Profile</span>
-        </button>
+        </a>
       </div>
       <div className="nav-user" style={{display:'none'}}>
         &nbsp;
@@ -3352,7 +3356,7 @@ function App() {
 
   return (
     <div style={{display:'flex', minHeight:'100vh', background:'var(--bg)'}}>
-      <Sidebar page={navPage} setPage={navigate} user={user} pageToHash={pageToHash}/>
+      <Sidebar page={navPage} setPage={navigate} user={user} pageToPath={pageToPath}/>
       <div className="main-wrap">
         {page === 'games'       && <GamesPage uid={uid} setPage={navigate} setGameId={setGameId} active={page}/>}
         {page === 'new-game'    && <NewGamePage uid={uid} setPage={navigate} setGameId={setGameId}/>}
