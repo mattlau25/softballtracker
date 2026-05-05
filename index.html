@@ -448,9 +448,23 @@ function calcGameStats(abs, includeKFoulInK) {
 
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, handedness = 'R' }) {
-  // Use a fixed normalized coordinate space of 1000x1000
-  // All clicks and stored coords are in this space
+  // All coordinates stored and computed in 0-1000 normalized space
   const NORM = 1000;
+
+  // Normalize a stored point to NORM space
+  // Handles old data (w:320,h:281), new data (w:1000,h:1000), and missing w/h
+  const normX = p => {
+    if (!p) return 0;
+    const w = p.w || 320;
+    // Old SVG data was saved in ~320x281 space
+    // New data saved in 1000x1000 space
+    return p.x * NORM / w;
+  };
+  const normY = p => {
+    if (!p) return 0;
+    const h = p.h || 281;
+    return p.y * NORM / h;
+  };
 
   const handleClick = e => {
     if (!interactive) return;
@@ -460,54 +474,61 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     onPlot && onPlot({ x, y, w: NORM, h: NORM });
   };
 
-  // Normalize any stored hit coordinate to NORM space
-  const nx = hit => hit.x * NORM / (hit.w || NORM);
-  const ny = hit => hit.y * NORM / (hit.h || NORM);
+  // Image natural aspect ratio: 2839 x 2450 = 1.159
+  // SVG overlay must match this exactly
+  const IMG_W = 2839, IMG_H = 2450;
 
   return (
     <div style={{ position:'relative', width:'100%', maxWidth: size === 600 ? '100%' : size, cursor: interactive ? 'crosshair' : 'default', userSelect:'none' }}
       onClick={handleClick}>
-      {/* Diamond image — aspect ratio from PNG */}
       <img src={DIAMOND_URL} alt="field" style={{ width:'100%', display:'block', borderRadius:8 }} draggable={false}/>
-
-      {/* SVG overlay — matches image exactly via preserveAspectRatio */}
-      <svg viewBox={`0 0 ${NORM} ${NORM}`} preserveAspectRatio="none"
+      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
         style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none' }}>
 
-        {/* Heatmap overlay */}
+        {/* Heatmap */}
         {showHeatmap && hits.length > 0 && (() => {
-          const cells = 12, cw = NORM/cells, ch = NORM/cells;
+          const cells = 12;
+          const cw = IMG_W/cells, ch = IMG_H/cells;
           const grid = Array.from({length:cells},()=>Array(cells).fill(0));
           hits.forEach(h => {
-            const ci = Math.floor(nx(h)/cw), ri = Math.floor(ny(h)/ch);
-            if (ci>=0&&ci<cells&&ri>=0&&ri<cells) grid[ri][ci]++;
+            const px = normX(h) / NORM * IMG_W;
+            const py = normY(h) / NORM * IMG_H;
+            const ci = Math.min(Math.floor(px/cw), cells-1);
+            const ri = Math.min(Math.floor(py/ch), cells-1);
+            if (ci>=0 && ri>=0) grid[ri][ci]++;
           });
-          const max = Math.max(...grid.flat(),1);
+          const max = Math.max(...grid.flat(), 1);
           return grid.flatMap((row,ri) => row.map((val,ci) => {
             if (!val) return null;
             return <rect key={`h${ri}-${ci}`} x={ci*cw} y={ri*ch} width={cw} height={ch}
-              fill={`rgba(220,50,50,${(val/max)*0.65})`} rx="2"/>;
+              fill={`rgba(220,50,50,${(val/max)*0.65})`} rx="4"/>;
           }));
         })()}
 
         {/* Previous hits */}
-        {hits.map((h,i) => (
-          <circle key={i}
-            cx={nx(h)} cy={ny(h)}
-            r={18}
-            fill={COUNTS_AS_HIT.has(h.outcome) ? '#276749' : '#c53030'}
-            fillOpacity="0.85"
-            stroke={COUNTS_AS_HIT.has(h.outcome) ? '#1a4d34' : '#9b2222'}
-            strokeWidth="2"/>
-        ))}
+        {hits.map((h,i) => {
+          const px = normX(h) / NORM * IMG_W;
+          const py = normY(h) / NORM * IMG_H;
+          return (
+            <circle key={i} cx={px} cy={py} r={50}
+              fill={COUNTS_AS_HIT.has(h.outcome) ? '#276749' : '#c53030'}
+              fillOpacity="0.85"
+              stroke={COUNTS_AS_HIT.has(h.outcome) ? '#1a4d34' : '#9b2222'}
+              strokeWidth="6"/>
+          );
+        })}
 
-        {/* Plotted point — normalize same way */}
-        {plotted && (
-          <g>
-            <circle cx={nx(plotted)} cy={ny(plotted)} r={22} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="2"/>
-            <circle cx={nx(plotted)} cy={ny(plotted)} r={12} fill="#1e3a5f"/>
-          </g>
-        )}
+        {/* Plotted (interactive) point */}
+        {plotted && (() => {
+          const px = normX(plotted) / NORM * IMG_W;
+          const py = normY(plotted) / NORM * IMG_H;
+          return (
+            <g>
+              <circle cx={px} cy={py} r={65} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="8"/>
+              <circle cx={px} cy={py} r={35} fill="#1e3a5f"/>
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
@@ -1503,10 +1524,14 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
       bases,
       countAsAB: COUNTS_AS_AB.has(f.outcome),
       countAsHit: COUNTS_AS_HIT.has(f.outcome),
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
-    if (isEdit) await absCol(uid, gameId).doc(ab.id).update(data);
-    else await absCol(uid, gameId).add(data);
+    if (isEdit) {
+      // Don't touch timestamp on edit — preserves ordering
+      await absCol(uid, gameId).doc(ab.id).update(data);
+    } else {
+      data.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      await absCol(uid, gameId).add(data);
+    }
     haptic('success');
     const toastMsg = f.outcome + (f.rbi > 0 ? `, ${f.rbi} RBI` : '');
     setToast(toastMsg);
@@ -1884,25 +1909,35 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {abs.length > 0 && (
         <div style={S.card}>
           <div style={S.cardTitle}>Game Stats</div>
-          <div style={S.statsGrid} className="stats-grid-5">
-            {[['PA',stats.pa],['AB',stats.ab],['H',stats.h],['R',stats.r],['RBI',stats.rbi],
-              ['2B',stats.doubles],['3B',stats.triples],['HR',stats.hr],['BB',stats.bb],['K',stats.kTotal]].map(([l,v]) => (
-              <div key={l} style={S.statCell}><div style={S.statLabel}>{l}</div><div style={S.statVal}>{v}</div></div>
-            ))}
-          </div>
-          <div style={{...S.statsGrid, marginTop:8, gridTemplateColumns:'repeat(3,1fr)'}}>
-            {[['AVG',calcAVG(stats.h,stats.ab)],['OBP',calcOBP(stats.h,stats.bb,stats.hbp,stats.sf,stats.ab)],['SLG',calcSLG(stats.tb,stats.ab)]].map(([l,v]) => (
-              <div key={l} style={S.statCell}><div style={S.statLabel}>{l}</div><div style={{...S.statVal, color:'#276749'}}>{v}</div></div>
-            ))}
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%', borderCollapse:'collapse', fontSize:13}}>
+              <thead>
+                <tr style={{borderBottom:'2px solid var(--border)'}}>
+                  {['PA','AB','H','2B','3B','HR','R','RBI','BB','K','AVG','OBP','SLG'].map(h => (
+                    <th key={h} style={{padding:'6px 8px', textAlign:'center', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.06em', whiteSpace:'nowrap'}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {[stats.pa, stats.ab, stats.h, stats.doubles, stats.triples, stats.hr, stats.r, stats.rbi, stats.bb, stats.kTotal].map((v,i) => (
+                    <td key={i} style={{padding:'8px', textAlign:'center', fontWeight:600, color:'var(--text)', fontSize:14}}>{v}</td>
+                  ))}
+                  {[calcAVG(stats.h,stats.ab), calcOBP(stats.h,stats.bb,stats.hbp,stats.sf,stats.ab), calcSLG(stats.tb,stats.ab)].map((v,i) => (
+                    <td key={`r${i}`} style={{padding:'8px', textAlign:'center', fontWeight:700, color:'#276749', fontSize:14}}>{v}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           </div>
           {(stats.po+stats.ast+stats.err > 0) && (
-            <div style={{marginTop:12, paddingTop:12, borderTop:'1px solid #e2e8f0'}}>
+            <div style={{marginTop:12, paddingTop:12, borderTop:'1px solid var(--border)'}}>
               <div style={{...S.label, marginBottom:8, display:'block'}}>Fielding</div>
               <div style={{display:'flex', gap:16, fontSize:13}}>
-                <span style={S.muted}>PO: <span style={{color:'#1a202c',fontWeight:600}}>{stats.po}</span></span>
-                <span style={S.muted}>A: <span style={{color:'#1a202c',fontWeight:600}}>{stats.ast}</span></span>
-                <span style={S.muted}>E: <span style={{color:'#1a202c',fontWeight:600}}>{stats.err}</span></span>
-                <span style={S.muted}>FLD%: <span style={{color:'#1a202c',fontWeight:600}}>{fldPct}</span></span>
+                <span style={S.muted}>PO: <span style={{color:'var(--text)',fontWeight:600}}>{stats.po}</span></span>
+                <span style={S.muted}>A: <span style={{color:'var(--text)',fontWeight:600}}>{stats.ast}</span></span>
+                <span style={S.muted}>E: <span style={{color:'var(--text)',fontWeight:600}}>{stats.err}</span></span>
+                <span style={S.muted}>FLD%: <span style={{color:'var(--text)',fontWeight:600}}>{fldPct}</span></span>
               </div>
             </div>
           )}
