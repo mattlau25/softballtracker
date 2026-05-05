@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Softball Tracker</title>
+<script>
+  // GitHub Pages SPA routing trick
+  // Store the full path in sessionStorage and redirect to index.html
+  var path = window.location.pathname + window.location.search;
+  sessionStorage.setItem('spa_redirect', path);
+  window.location.replace(window.location.origin + window.location.pathname.split('/').slice(0,2).join('/') + '/');
+</script>
+</head>
+<body></body>
+</html>
