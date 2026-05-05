@@ -448,42 +448,38 @@ function calcGameStats(abs, includeKFoulInK) {
 
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, handedness = 'R' }) {
-  const W = size;
-  const H = Math.round(size * 0.92);
-
-  // Calibrated to match the diamond_diagram.png proportions
-  // Home plate is near bottom-center, outfield arc at top
-  const HX = W * 0.5;
-  const HY = H * 0.88;
-  const D = size * 0.18;
-
-  const firstX = HX + D, firstY = HY - D;
-  const secX   = HX,     secY   = HY - 2 * D;
-  const thirdX = HX - D, thirdY = HY - D;
+  // Use a fixed normalized coordinate space of 1000x1000
+  // All clicks and stored coords are in this space
+  const NORM = 1000;
 
   const handleClick = e => {
     if (!interactive) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * W);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * H);
-    onPlot && onPlot({ x, y });
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * NORM);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * NORM);
+    onPlot && onPlot({ x, y, w: NORM, h: NORM });
   };
 
+  // Normalize any stored hit coordinate to NORM space
+  const nx = hit => hit.x * NORM / (hit.w || NORM);
+  const ny = hit => hit.y * NORM / (hit.h || NORM);
+
   return (
-    <div style={{ position:'relative', width:'100%', maxWidth:size, cursor: interactive ? 'crosshair' : 'default', userSelect:'none' }}
+    <div style={{ position:'relative', width:'100%', maxWidth: size === 600 ? '100%' : size, cursor: interactive ? 'crosshair' : 'default', userSelect:'none' }}
       onClick={handleClick}>
-      {/* Diamond image */}
+      {/* Diamond image — aspect ratio from PNG */}
       <img src={DIAMOND_URL} alt="field" style={{ width:'100%', display:'block', borderRadius:8 }} draggable={false}/>
 
-      {/* SVG overlay for dots */}
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none' }}>
+      {/* SVG overlay — matches image exactly via preserveAspectRatio */}
+      <svg viewBox={`0 0 ${NORM} ${NORM}`} preserveAspectRatio="none"
+        style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none' }}>
+
         {/* Heatmap overlay */}
         {showHeatmap && hits.length > 0 && (() => {
-          const cells = 12, cw = W/cells, ch = H/cells;
+          const cells = 12, cw = NORM/cells, ch = NORM/cells;
           const grid = Array.from({length:cells},()=>Array(cells).fill(0));
-          hits.forEach(hit => {
-            const nx = hit.x * W / (hit.w||320), ny = hit.y * H / (hit.h||281);
-            const ci = Math.floor(nx/cw), ri = Math.floor(ny/ch);
+          hits.forEach(h => {
+            const ci = Math.floor(nx(h)/cw), ri = Math.floor(ny(h)/ch);
             if (ci>=0&&ci<cells&&ri>=0&&ri<cells) grid[ri][ci]++;
           });
           const max = Math.max(...grid.flat(),1);
@@ -495,22 +491,21 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
         })()}
 
         {/* Previous hits */}
-        {hits.map((hit,i) => (
+        {hits.map((h,i) => (
           <circle key={i}
-            cx={hit.x * W / (hit.w||320)}
-            cy={hit.y * H / (hit.h||281)}
-            r={size * 0.018}
-            fill={COUNTS_AS_HIT.has(hit.outcome) ? '#276749' : '#c53030'}
+            cx={nx(h)} cy={ny(h)}
+            r={18}
+            fill={COUNTS_AS_HIT.has(h.outcome) ? '#276749' : '#c53030'}
             fillOpacity="0.85"
-            stroke={COUNTS_AS_HIT.has(hit.outcome) ? '#1a4d34' : '#9b2222'}
-            strokeWidth="1"/>
+            stroke={COUNTS_AS_HIT.has(h.outcome) ? '#1a4d34' : '#9b2222'}
+            strokeWidth="2"/>
         ))}
 
-        {/* Plotted point */}
+        {/* Plotted point — normalize same way */}
         {plotted && (
           <g>
-            <circle cx={plotted.x} cy={plotted.y} r={size*0.022} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="1.5"/>
-            <circle cx={plotted.x} cy={plotted.y} r={size*0.012} fill="#1e3a5f"/>
+            <circle cx={nx(plotted)} cy={ny(plotted)} r={22} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="2"/>
+            <circle cx={nx(plotted)} cy={ny(plotted)} r={12} fill="#1e3a5f"/>
           </g>
         )}
       </svg>
@@ -1601,16 +1596,6 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
         </div>
       )}
 
-      {/* Spray chart */}
-      {showSpray && (
-        <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={{...S.label, display:'block', marginBottom:8}}>Hit Location</label>
-          <div style={{width:'100%', background:'var(--spray-bg)', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', display:'flex', justifyContent:'center'}}>
-            <SprayChart onPlot={pt => upd('spray', {...pt, w:320, h:281})} plotted={f.spray} interactive={true} size={600}/>
-          </div>
-          {f.spray && <button onClick={() => upd('spray', null)} style={{...S.btnSmall, marginTop:6, fontSize:11}}>Clear placement</button>}
-        </div>
-      )}
 
       {/* Trajectory */}
       {f.outcome && (
@@ -1654,6 +1639,17 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
         <textarea style={{...S.input, height:65, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Notes about this at bat..."/>
       </div>
 
+      {/* Spray chart — bottom */}
+      {showSpray && (
+        <div style={{...S.formGroup, marginBottom:16}}>
+          <label style={{...S.label, display:'block', marginBottom:8}}>Hit Location</label>
+          <div style={{width:'100%', background:'var(--spray-bg)', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', display:'flex', justifyContent:'center'}}>
+            <SprayChart onPlot={pt => upd('spray', pt)} plotted={f.spray} interactive={true} size={600}/>
+          </div>
+          {f.spray && <button onClick={() => upd('spray', null)} style={{...S.btnSmall, marginTop:6, fontSize:11}}>Clear placement</button>}
+        </div>
+      )}
+
       <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
         <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>
         <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)} style={S.btnPrimary}>
@@ -1679,6 +1675,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [confirmAB, setConfirmAB] = useState(null);
   const [confirmGame, setConfirmGame] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [dragIdx, setDragIdx] = useState(null);
   const [showFieldingForm, setShowFieldingForm] = useState(false);
   const [fieldingEntries, setFieldingEntries] = useState([]);
   const [fieldingForm, setFieldingForm] = useState({ inning:'', position:'', putouts:0, assists:0, errors:0, notes:'' });
@@ -1957,7 +1955,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
           {!showForm && !editId && (
             <div style={{display:'flex', gap:6}}>
-              <button onClick={()=>setShowForm(true)} style={S.btnPrimary}>+ Record AB</button>
+              {abs.length > 1 && <button onClick={()=>setReorderMode(r=>!r)} style={S.btnSecondary}>{reorderMode ? 'Done' : 'Reorder'}</button>}
+              <button onClick={()=>{setReorderMode(false);setShowForm(true);}} style={S.btnPrimary}>+ Record AB</button>
             </div>
           )}
         </div>
@@ -1999,10 +1998,18 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               };
               return (
                 <div key={ab.id} style={S.listItem}>
-                  <div style={{display:'flex', flexDirection:'column', gap:2, flexShrink:0, marginRight:4}}>
-                    <button onClick={() => moveAB(i, i-1)} disabled={i===0} style={{background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:12, padding:'1px 4px', lineHeight:1}}>▲</button>
-                    <div style={{width:24, height:24, borderRadius:7, background:color+'18', color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700}}>{i+1}</div>
-                    <button onClick={() => moveAB(i, i+1)} disabled={i===abs.length-1} style={{background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:12, padding:'1px 4px', lineHeight:1}}>▼</button>
+                  <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0, marginRight:4}}>
+                    {reorderMode && (
+                      <div draggable onDragStart={()=>setDragIdx(i)}
+                        onDragOver={e=>{e.preventDefault();}}
+                        onDrop={()=>{if(dragIdx!==null&&dragIdx!==i){moveAB(dragIdx,i);setDragIdx(null);}}}
+                        style={{cursor:'grab', color:'var(--muted)', display:'flex', flexDirection:'column', gap:2, padding:'2px 4px'}}>
+                        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 3px'}}>
+                          {[0,1,2,3,4,5].map(d=><div key={d} style={{width:4,height:4,borderRadius:'50%',background:'var(--muted)',opacity:0.6}}/>)}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{color:'var(--muted)', fontSize:12, fontWeight:500, minWidth:24, textAlign:'center'}}>#{i+1}</div>
                   </div>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
@@ -2010,7 +2017,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                       {ab.rbi > 0 && <span style={S.badge}>{ab.rbi} RBI</span>}
                       {ab.runScored && <span style={S.badge}>R</span>}
                       {dir && <span style={{...S.badge, color:'var(--primary)'}}>{dir}</span>}
-                      {ab.spray && <span style={{...S.badge, color:'var(--success)'}}>📍</span>}
+                      
                     </div>
                     <div style={S.listSub}>
                       {[ab.batName, ab.position, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
@@ -2031,9 +2038,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Fielding Card — always visible ── */}
       <div style={{...S.card, marginTop:16}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0)}}>
-          <div style={S.cardTitle}>Fielding</div>
+          <div style={S.sectionTitle}>Fielding</div>
           {!showFieldingForm && (
-            <button onClick={()=>{setShowFieldingForm(true);setEditFieldingId(null);setFieldingForm({inning:'',position:'',putouts:0,assists:0,errors:0,notes:''}); }} style={S.btnPrimary}>+ Fielding</button>
+            <button onClick={()=>{setShowFieldingForm(true);setEditFieldingId(null);setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''}); }} style={S.btnPrimary}>+ Record Fielding</button>
           )}
         </div>
 
@@ -2054,7 +2061,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 <label style={S.label}>Position *</label>
                 <select style={S.select} value={fieldingForm.position} onChange={e=>setFieldingForm(f=>({...f,position:e.target.value}))}>
                   <option value="">— Select —</option>
-                  {['P','C','1B','2B','3B','SS','LF','CF','RF','DH','EH','UTIL'].map(p=>(
+                  {['P','C','1B','2B','3B','SS','LF','LCF','CF','RCF','RF','DH','EH','UTIL'].map(p=>(
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
@@ -2096,7 +2103,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         {/* Entries list */}
         {!showFieldingForm && fieldingEntries.length === 0 && (
           <div style={{...S.empty, padding:'20px 0'}}>
-            <p style={{color:'var(--muted)', fontSize:13}}>No fielding recorded yet.</p>
+            <p>No fielding recorded yet.</p>
           </div>
         )}
         {!showFieldingForm && fieldingEntries.length > 0 && (
