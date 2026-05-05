@@ -730,8 +730,8 @@ function Sidebar({ page, setPage, user }) {
           <span>Profile</span>
         </button>
       </div>
-      <div className="nav-user">
-        <div style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:11, opacity:0}}>&nbsp;</div>
+      <div className="nav-user" style={{display:'none'}}>
+        &nbsp;
       </div>
     </nav>
   );
@@ -1189,17 +1189,28 @@ function GamesPage({ uid, setPage, setGameId, active }) {
 
   useEffect(() => { loadAll(); }, [uid, active]);
 
-  const go = id => { setGameId(id); setPage('game-detail'); };
+  const go = id => { setPage('game-detail', id); };
 
-  const searchLower = search.toLowerCase();
-  const filteredGames = search
-    ? games.filter(g =>
-        (g.opponent||'').toLowerCase().includes(searchLower) ||
-        (g.park||'').toLowerCase().includes(searchLower) ||
-        (g.teamName||'').toLowerCase().includes(searchLower) ||
-        (g.season||'').toLowerCase().includes(searchLower) ||
-        (g.league||'').toLowerCase().includes(searchLower)
-      )
+  const searchLower = search.toLowerCase().trim();
+  const filteredGames = searchLower
+    ? games.filter(g => {
+        const fields = [
+          g.opponent, g.park, g.teamName, g.season, g.league, g.tier,
+          g.homeAway, g.dayNight, g.comments,
+          g.date,                          // e.g. "2026-05-04"
+          fmtDate(g.date),                 // e.g. "Mon, May 4, 2026"
+          getDayOfWeek(g.date),            // e.g. "Monday"
+          g.time ? fmtTime(g.time) : '',   // e.g. "7:30PM"
+          g.time,                          // e.g. "19:30"
+          g.myScore !== undefined ? String(g.myScore) : '',
+          g.oppScore !== undefined ? String(g.oppScore) : '',
+          g.myScore !== undefined && g.oppScore !== undefined
+            ? `${g.myScore}-${g.oppScore}` : '',
+          // year
+          g.date ? g.date.slice(0,4) : '',
+        ].filter(Boolean);
+        return fields.some(f => f.toLowerCase().includes(searchLower));
+      })
     : games;
 
   const streak = (() => {
@@ -1316,17 +1327,17 @@ function NewGamePage({ uid, setPage, setGameId }) {
   const pickSeason = id => {
     setSelectedSeasonId(id);
     if (!id) {
-      setF(x => ({...x, season:'', teamName:'', league:'', tier:''}));
+      setF(x => ({...x, season:'', teamName:'', league:'', tier:'', seasonId:''}));
       return;
     }
     const s = seasons.find(s => s.id === id);
-    if (s) setF(x => ({...x, season: s.name, teamName: s.teamName||'', league: s.league||'', tier: s.tier||''}));
+    if (s) setF(x => ({...x, season: s.name, teamName: s.teamName||'', league: s.league||'', tier: s.tier||'', seasonId: id}));
   };
 
   const save = async () => {
     setSaving(true);
     const ref = await gamesCol(uid).add({ ...f, dayOfWeek: getDayOfWeek(f.date), createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    setGameId(ref.id); setPage('game-detail');
+    setPage('game-detail', ref.id);
   };
 
   const lockedStyle = { ...S.input, opacity:0.55, cursor:'not-allowed', background:'var(--border2)' };
@@ -1426,6 +1437,89 @@ function NewGamePage({ uid, setPage, setGameId }) {
   );
 }
 
+// ─── BAT DROPDOWN ──────────────────────────────────────────────────────────────
+function BatDropdown({ bats, value, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+
+  // Close on outside click
+  React.useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const activeFavs = bats.filter(b => !b.archived && b.favourite);
+  const activeRest = bats.filter(b => !b.archived && !b.favourite);
+  const selected = bats.find(b => b.id === value);
+
+  const batSubline = b => {
+    const parts = [];
+    if (b.weight) parts.push(`${b.weight} oz`);
+    if (b.endloadWeight) parts.push(`${b.endloadWeight} oz endload`);
+    return parts.join(' · ');
+  };
+
+  const BatOption = ({ bat }) => (
+    <div onClick={() => { onChange(bat.id); setOpen(false); }}
+      style={{padding:'10px 14px', cursor:'pointer', background: value===bat.id ? 'var(--border2)' : 'transparent',
+        borderBottom:'1px solid var(--border2)'}}
+      onMouseEnter={e => e.currentTarget.style.background='var(--border2)'}
+      onMouseLeave={e => e.currentTarget.style.background = value===bat.id ? 'var(--border2)' : 'transparent'}>
+      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>
+        {bat.favourite ? '⭐ ' : ''}{bat.name}
+      </div>
+      {batSubline(bat) && <div style={{fontSize:12, color:'var(--muted)', marginTop:2}}>{batSubline(bat)}</div>}
+    </div>
+  );
+
+  return (
+    <div ref={ref} style={{position:'relative'}}>
+      <div onClick={() => setOpen(o => !o)}
+        style={{...S.select, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', minHeight:40}}>
+        <div>
+          {selected ? (
+            <>
+              <div style={{fontSize:14, color:'var(--text)'}}>{selected.favourite ? '⭐ ' : ''}{selected.name}</div>
+              {batSubline(selected) && <div style={{fontSize:12, color:'var(--muted)'}}>{batSubline(selected)}</div>}
+            </>
+          ) : <span style={{color:'var(--muted)'}}>— Select bat —</span>}
+        </div>
+        <span style={{color:'var(--muted)', marginLeft:8, fontSize:12}}>{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)',
+          border:'1px solid var(--border)', borderRadius:8, zIndex:200, maxHeight:240, overflowY:'auto',
+          boxShadow:'0 4px 16px rgba(0,0,0,0.12)'}}>
+          <div onClick={() => { onChange(''); setOpen(false); }}
+            style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border2)', color:'var(--muted)', fontSize:14}}
+            onMouseEnter={e => e.currentTarget.style.background='var(--border2)'}
+            onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+            — Select bat —
+          </div>
+          {activeFavs.length > 0 && (
+            <>
+              <div style={{padding:'6px 14px 4px', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.06em', background:'var(--surface2)'}}>
+                ⭐ Favourites
+              </div>
+              {activeFavs.map(b => <BatOption key={b.id} bat={b}/>)}
+            </>
+          )}
+          {activeRest.length > 0 && (
+            <>
+              {activeFavs.length > 0 && <div style={{padding:'6px 14px 4px', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.06em', background:'var(--surface2)'}}>All Bats</div>}
+              {activeRest.map(b => <BatOption key={b.id} bat={b}/>)}
+            </>
+          )}
+          {activeFavs.length === 0 && activeRest.length === 0 && (
+            <div style={{padding:'12px 14px', color:'var(--muted)', fontSize:13}}>No bats registered yet.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── AB FORM ───────────────────────────────────────────────────────────────────
 function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defaultPosition='' }) {
   const isEdit = !!ab;
@@ -1507,19 +1601,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
       {!quickMode && (
         <div style={{...S.formGroup, marginBottom:16}}>
           <label style={S.label}>Bat Used</label>
-          <select style={S.select} value={f.batId} onChange={e => upd('batId', e.target.value)}>
-            <option value="">— Select bat —</option>
-            {bats.filter(b=>!b.archived&&b.favourite).length > 0 && (
-              <optgroup label="⭐ Favourites">
-                {bats.filter(b=>!b.archived&&b.favourite).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </optgroup>
-            )}
-            {bats.filter(b=>!b.archived&&!b.favourite).length > 0 && (
-              <optgroup label="All Bats">
-                {bats.filter(b=>!b.archived&&!b.favourite).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </optgroup>
-            )}
-          </select>
+          <BatDropdown bats={bats} value={f.batId} onChange={id => upd('batId', id)}/>
         </div>
       )}
 
@@ -2032,17 +2114,22 @@ function SeasonsPage({ uid }) {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       await seasonsCol(uid).add(data);
     } else {
-      // Get old season name before updating
       const oldDoc = seasons.find(s => s.id === editing);
       await seasonsCol(uid).doc(editing).update(data);
-      // Propagate name change to all games that used old season name
-      if (oldDoc && oldDoc.name !== form.name) {
-        const gSnap = await gamesCol(uid).where('season', '==', oldDoc.name).get();
-        await Promise.all(gSnap.docs.map(d => d.ref.update({
+      // Propagate changes to all games that reference this season
+      // Match by seasonId (preferred) or by old season name string (legacy)
+      if (oldDoc) {
+        const gSnap = await gamesCol(uid).get();
+        const toUpdate = gSnap.docs.filter(d => {
+          const g = d.data();
+          return g.seasonId === editing || g.season === oldDoc.name;
+        });
+        await Promise.all(toUpdate.map(d => d.ref.update({
+          seasonId: editing,
           season: form.name,
-          teamName: form.teamName||d.data().teamName,
-          league: form.league||d.data().league,
-          tier: form.tier||d.data().tier,
+          teamName: form.teamName || d.data().teamName,
+          league: form.league || d.data().league,
+          tier: form.tier || d.data().tier,
         })));
       }
     }
@@ -2670,7 +2757,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
   const sprayA=sprayFA==='hits'?sprayABsA.filter(ab=>COUNTS_AS_HIT.has(ab.outcome)):sprayABsA;
   const sprayB=sprayFB==='hits'?sprayABsB.filter(ab=>COUNTS_AS_HIT.has(ab.outcome)):sprayABsB;
 
-  const go = id => { setGameId(id); setPage('game-detail'); };
+  const go = id => { setPage('game-detail', id); };
   const thS={padding:'9px 10px',textAlign:'center',fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.05em',cursor:'pointer',whiteSpace:'nowrap',userSelect:'none'};
   const tdS={padding:'10px 10px',textAlign:'center',fontSize:13,color:'#4a5568',borderBottom:'1px solid #f0f2f5'};
 
@@ -3173,9 +3260,10 @@ function App() {
     if (newPage === 'game-detail') {
       setPrevPage(page === 'new-game' ? 'games' : page);
     }
-    const newHash = pageToHash(newPage, gId || gameId);
-    window.history.pushState(null, '', newHash);
-    setRouteState({ page: newPage, gameId: gId || gameId });
+    const resolvedGameId = gId !== null ? gId : gameId;
+    const newHash = pageToHash(newPage, resolvedGameId);
+    window.history.pushState({ page: newPage, gameId: resolvedGameId }, '', newHash);
+    setRouteState({ page: newPage, gameId: resolvedGameId });
   };
 
   const setGameId = (id) => {
