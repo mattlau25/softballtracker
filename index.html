@@ -447,10 +447,10 @@ function calcGameStats(abs, includeKFoulInK) {
 }
 
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
-function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showOuts = true }) {
+function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, showOuts = true }) {
   const IMG_W = 2839, IMG_H = 2450;
-  const HOME_PX = IMG_W * 0.502;
-  const HOME_PY = IMG_H * 0.870;
+  const HOME_PX = IMG_W * 0.4972;
+  const HOME_PY = IMG_H * 0.830;
 
   const toPx = p => {
     if (!p) return {x:0, y:0};
@@ -471,7 +471,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO',
     'Pop Out':'PO','Foul Out':'FOK','Double Play':'DP',
     'Walk':'BB','Hit By Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH',
-    'Reach on Error':'ROE',"Fielder's Choice":'FC','Error':'E'
+    'Reach on Error':'E',"Fielder's Choice":'FC'
   };
 
   const dotColor = outcome => {
@@ -1564,7 +1564,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO','Pop Out':'PO',
     'Foul Out':'FOK','Double Play':'DP',
     'Walk':'BB','Hit By Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH',
-    'Reach on Error':'ROE',"Fielder's Choice":'FC','Error':'E'
+    'Reach on Error':'E',"Fielder's Choice":'FC'
   };
 
   const OTile = ({ label, group }) => {
@@ -1724,6 +1724,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [confirmGame, setConfirmGame] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [dragIdx, setDragIdx] = useState(null);
+  const [abCollapsed, setAbCollapsed] = useState(false);
+  const [sprayCollapsed, setSprayCollapsed] = useState(false);
+  const [fieldingCollapsed, setFieldingCollapsed] = useState(false);
   const [showFieldingForm, setShowFieldingForm] = useState(false);
   const [fieldingEntries, setFieldingEntries] = useState([]);
   const [fieldingForm, setFieldingForm] = useState({ inning:'', position:'', putouts:0, assists:0, errors:0, notes:'' });
@@ -1968,9 +1971,12 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* At Bats */}
       <div style={S.card}>
-        <div style={{...S.pageHeader, marginBottom:14}}>
-          <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
-          {!showForm && !editId && (
+        <div style={{...S.pageHeader, marginBottom: abCollapsed ? 0 : 14}}>
+          <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setAbCollapsed(c=>!c)}>
+            <span style={{color:'var(--muted)', fontSize:12}}>{abCollapsed ? '▶' : '▼'}</span>
+            <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
+          </div>
+          {!abCollapsed && !showForm && !editId && (
             <div style={{display:'flex', gap:6}}>
               {abs.length > 1 && <button onClick={()=>setReorderMode(r=>!r)} style={S.btnSecondary}>{reorderMode ? 'Done' : 'Reorder'}</button>}
               <button onClick={()=>{setReorderMode(false);setShowForm(true);}} style={S.btnPrimary}>+ Record AB</button>
@@ -1978,7 +1984,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           )}
         </div>
 
-        {showForm && (
+        {!abCollapsed && showForm && (
           <div style={{borderTop:'1px solid var(--border)', marginTop:0, paddingTop:4}}>
             <ABForm uid={uid} gameId={gameId} bats={bats}
               defaultPosition={profile.primaryPosition||''}
@@ -1987,11 +1993,13 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
         )}
 
-        {loading ? <p style={S.muted}>Loading...</p> : abs.length === 0 && !showForm ? (
+        {!abCollapsed && loading && <p style={S.muted}>Loading...</p>}
+        {!abCollapsed && !loading && abs.length === 0 && !showForm && (
           <div style={{...S.empty, padding:'28px 0'}}>
             <p>No at bats recorded yet.</p>
           </div>
-        ) : (
+        )}
+        {!abCollapsed && !loading && abs.length > 0 && (
           <div style={S.list}>
             {abs.map((ab, i) => {
               const color = abOutcomeColor(ab);
@@ -2050,19 +2058,75 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             })}
           </div>
         )}
+        {abCollapsed && abs.length > 0 && <div style={{color:'var(--muted)', fontSize:13}}>{abs.length} at bat{abs.length!==1?'s':''} recorded</div>}
       </div>
+
+      {/* Spray Chart — between At Bats and Fielding */}
+      {sprayHits.length > 0 && (
+        <div style={{...S.card, marginTop:16}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: sprayCollapsed ? 0 : 12}}>
+            <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+              <span style={{color:'var(--muted)', fontSize:12}}>{sprayCollapsed ? '▶' : '▼'}</span>
+              <div style={S.sectionTitle}>Spray Chart</div>
+            </div>
+            {!sprayCollapsed && (
+              <div style={{display:'flex', gap:6, alignItems:'center'}}>
+                <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
+                  <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
+                  Show outs
+                </label>
+                {[['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val]) => (
+                  <button key={val} onClick={()=>setShowHeatmap(val)}
+                    style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          {!sprayCollapsed && (
+            <>
+              <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
+                <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
+              </div>
+              <p style={{...S.hint, marginTop:8, textAlign:'center'}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</p>
+              {dirTotal > 0 && showHeatmap==='spray' && (
+                <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
+                  <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
+                  {['Pull','Center','Oppo'].map(dir => {
+                    const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
+                    return (
+                      <div key={dir} style={{marginBottom:8}}>
+                        <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
+                          <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
+                          <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
+                        </div>
+                        <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
+                          <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+          {sprayCollapsed && <div style={{color:'var(--muted)', fontSize:13}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</div>}
+        </div>
+      )}
 
       {/* ── Fielding Card — always visible ── */}
       <div style={{...S.card, marginTop:16}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0)}}>
-          <div style={S.sectionTitle}>Fielding</div>
-          {!showFieldingForm && (
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: fieldingCollapsed ? 0 : (showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0))}}>
+          <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setFieldingCollapsed(c=>!c)}>
+            <span style={{color:'var(--muted)', fontSize:12}}>{fieldingCollapsed ? '▶' : '▼'}</span>
+            <div style={S.sectionTitle}>Fielding</div>
+          </div>
+          {!fieldingCollapsed && !showFieldingForm && (
             <button onClick={()=>{setShowFieldingForm(true);setEditFieldingId(null);setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''}); }} style={S.btnPrimary}>+ Record Fielding</button>
           )}
         </div>
 
         {/* Form */}
-        {showFieldingForm && (
+        {!fieldingCollapsed && showFieldingForm && (
           <>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14}}>
               <div style={S.formGroup}>
@@ -2118,12 +2182,12 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         )}
 
         {/* Entries list */}
-        {!showFieldingForm && fieldingEntries.length === 0 && (
+        {!fieldingCollapsed && !showFieldingForm && fieldingEntries.length === 0 && (
           <div style={{...S.empty, padding:'20px 0'}}>
             <p>No fielding recorded yet.</p>
           </div>
         )}
-        {!showFieldingForm && fieldingEntries.length > 0 && (
+        {!fieldingCollapsed && !showFieldingForm && fieldingEntries.length > 0 && (
           <div style={S.list}>
             {fieldingEntries.map(entry => (
               <div key={entry.id} style={{...S.listItem, flexDirection:'column', alignItems:'flex-start', gap:6}}>
@@ -2147,51 +2211,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             ))}
           </div>
         )}
+        {fieldingCollapsed && fieldingEntries.length > 0 && <div style={{color:'var(--muted)', fontSize:13}}>{fieldingEntries.length} inning{fieldingEntries.length!==1?'s':''} recorded</div>}
       </div>
-
-      {/* Spray chart — below fielding */}
-      {sprayHits.length > 0 && (
-        <div style={S.card}>
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
-            <div style={S.cardTitle}>Spray Chart</div>
-            <div style={{display:'flex', gap:6, alignItems:'center'}}>
-              <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
-                <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
-                Show outs
-              </label>
-              {[['Spray','spray'],['Heat','heat']].map(([lbl,val]) => (
-                <button key={val} onClick={()=>setShowHeatmap(val)}
-                  style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
-            <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showOuts={showOuts}/>
-          </div>
-          <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
-            {sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}
-          </p>
-          {dirTotal > 0 && showHeatmap==='spray' && (
-            <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
-              <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
-              {['Pull','Center','Oppo'].map(dir => {
-                const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
-                return (
-                  <div key={dir} style={{marginBottom:8}}>
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
-                      <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
-                      <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
-                    </div>
-                    <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
-                      <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
