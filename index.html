@@ -446,18 +446,30 @@ function calcGameStats(abs, includeKFoulInK) {
 
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, handedness = 'R' }) {
-  const W = size, H = Math.round(size * 0.88);
-  const HX = W / 2, HY = H - 18;
-  const D = size * 0.27; // diamond leg length
+  // Better proportions — taller arc, more realistic field shape
+  const W = size;
+  const H = Math.round(size * 0.92);
+  const HX = W / 2;
+  const HY = H - 16;
+  const D = size * 0.22; // diamond leg
+
+  // Base positions
   const firstX = HX + D, firstY = HY - D;
-  const secX = HX, secY = HY - 2 * D;
+  const secX   = HX,     secY   = HY - 2 * D;
   const thirdX = HX - D, thirdY = HY - D;
-  const arcR = size * 0.68;
-  const foulR = size * 0.83;
-  const foulLX = HX - foulR * 0.707, foulLY = HY - foulR * 0.707;
-  const foulRX = HX + foulR * 0.707, foulRY = HY - foulR * 0.707;
-  const arcLX = HX - arcR * 0.707, arcLY = HY - arcR * 0.707;
-  const arcRX = HX + arcR * 0.707, arcRY = HY - arcR * 0.707;
+
+  // Outfield arc — wider and higher for realistic look
+  const arcR  = size * 0.76;
+  const arcLX = HX - arcR * 0.71, arcLY = HY - arcR * 0.71;
+  const arcRX = HX + arcR * 0.71, arcRY = HY - arcR * 0.71;
+
+  // Foul lines extend past arc
+  const foulLen = size * 0.90;
+  const foulLX = HX - foulLen * 0.71, foulLY = HY - foulLen * 0.71;
+  const foulRX = HX + foulLen * 0.71, foulRY = HY - foulLen * 0.71;
+
+  // Infield arc (grass circle around infield)
+  const infieldR = D * 1.55;
 
   const handleClick = e => {
     if (!interactive) return;
@@ -468,115 +480,131 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     onPlot && onPlot({ x, y });
   };
 
+  // Greyscale palette
+  const C = {
+    foulGrass:    '#e8e8e8',  // foul territory — lightest
+    outfield:     '#d4d4d4',  // outfield grass
+    infieldGrass: '#c8c8c8',  // infield grass circle
+    infieldDirt:  '#bcbcbc',  // diamond dirt
+    mound:        '#b0b0b0',
+    base:         '#f5f5f5',
+    baseStroke:   '#a0a0a0',
+    line:         '#999',
+    foulLine:     '#aaa',
+    fence:        '#888',
+    label:        '#999',
+    basePath:     '#a8a8a8',
+  };
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', maxWidth: size, cursor: interactive ? 'crosshair' : 'default' }}
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', maxWidth: size, cursor: interactive ? 'crosshair' : 'default', borderRadius:8 }}
       onClick={handleClick}>
-      {/* Foul territory */}
-      <rect width={W} height={H} fill="var(--spray-foul)"/>
-      {/* Fair territory outfield */}
-      <path d={`M ${HX} ${HY} L ${arcLX} ${arcLY} A ${arcR} ${arcR} 0 0 1 ${arcRX} ${arcRY} Z`} fill="var(--spray-out)"/>
-      {/* Infield dirt */}
-      <polygon points={`${HX},${HY} ${firstX},${firstY} ${secX},${secY} ${thirdX},${thirdY}`} fill="var(--spray-dirt)"/>
-      {/* Pitcher's mound */}
-      <circle cx={HX} cy={HY - D} r={size * 0.03} fill="var(--spray-mound)"/>
+
+      {/* Background — foul territory */}
+      <rect width={W} height={H} fill={C.foulGrass} rx="6"/>
+
+      {/* Fair territory outfield — clipped to arc */}
+      <path d={`M ${HX} ${HY} L ${foulLX} ${foulLY} A ${foulLen} ${foulLen} 0 0 1 ${foulRX} ${foulRY} Z`}
+        fill={C.outfield}/>
+
+      {/* Outfield to infield separation — infield grass circle */}
+      <circle cx={HX} cy={HY - D * 0.9} r={infieldR} fill={C.infieldGrass}/>
+
+      {/* Infield dirt diamond */}
+      <polygon points={`${HX},${HY} ${firstX},${firstY} ${secX},${secY} ${thirdX},${thirdY}`}
+        fill={C.infieldDirt}/>
+
+      {/* Foul lines */}
+      <line x1={HX} y1={HY} x2={foulLX} y2={foulLY} stroke={C.foulLine} strokeWidth="1" strokeDasharray="4,3" opacity="0.7"/>
+      <line x1={HX} y1={HY} x2={foulRX} y2={foulRY} stroke={C.foulLine} strokeWidth="1" strokeDasharray="4,3" opacity="0.7"/>
+
+      {/* Outfield fence arc */}
+      <path d={`M ${arcLX} ${arcLY} A ${arcR} ${arcR} 0 0 1 ${arcRX} ${arcRY}`}
+        fill="none" stroke={C.fence} strokeWidth="2.5"/>
+
+      {/* Warning track — thick arc just inside fence */}
+      <path d={`M ${arcLX} ${arcLY} A ${arcR} ${arcR} 0 0 1 ${arcRX} ${arcRY}`}
+        fill="none" stroke={C.mound} strokeWidth="7" opacity="0.4"/>
+
       {/* Base paths */}
       {[[HX,HY,firstX,firstY],[firstX,firstY,secX,secY],[secX,secY,thirdX,thirdY],[thirdX,thirdY,HX,HY]].map(([x1,y1,x2,y2],i) => (
-        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--spray-path)" strokeWidth="1.5"/>
+        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={C.basePath} strokeWidth="1.5"/>
       ))}
-      {/* Foul lines */}
-      <line x1={HX} y1={HY} x2={foulLX} y2={foulLY} stroke="var(--spray-line)" strokeWidth="1" strokeDasharray="5,3"/>
-      <line x1={HX} y1={HY} x2={foulRX} y2={foulRY} stroke="var(--spray-line)" strokeWidth="1" strokeDasharray="5,3"/>
-      {/* Outfield fence */}
-      <path d={`M ${arcLX} ${arcLY} A ${arcR} ${arcR} 0 0 1 ${arcRX} ${arcRY}`} fill="none" stroke="var(--spray-fence)" strokeWidth="2"/>
+
+      {/* Pitcher's mound */}
+      <circle cx={HX} cy={HY - D * 0.9} r={size * 0.025} fill={C.mound}/>
+      <circle cx={HX} cy={HY - D * 0.9} r={size * 0.012} fill={C.foulGrass} opacity="0.6"/>
+
       {/* Bases */}
       {[[firstX,firstY],[secX,secY],[thirdX,thirdY]].map(([bx,by],i) => (
-        <rect key={i} x={bx-5} y={by-5} width="10" height="10" fill="white" stroke="#bbb" strokeWidth="0.5" transform={`rotate(45,${bx},${by})`}/>
+        <rect key={i} x={bx-5} y={by-5} width="10" height="10"
+          fill={C.base} stroke={C.baseStroke} strokeWidth="1"
+          transform={`rotate(45,${bx},${by})`}/>
       ))}
       {/* Home plate */}
-      <polygon points={`${HX},${HY-7} ${HX+5},${HY-4} ${HX+5},${HY+1} ${HX-5},${HY+1} ${HX-5},${HY-4}`} fill="white" stroke="#bbb" strokeWidth="0.5"/>
+      <polygon points={`${HX},${HY-7} ${HX+5},${HY-4} ${HX+5},${HY+1} ${HX-5},${HY+1} ${HX-5},${HY-4}`}
+        fill={C.base} stroke={C.baseStroke} strokeWidth="1"/>
+
       {/* Zone labels */}
-      <text x="12" y="26" fill="var(--spray-label)" fontSize={size*0.034}>LF</text>
-      <text x={W-12} y="26" textAnchor="end" fill="var(--spray-label)" fontSize={size*0.034}>RF</text>
-      <text x={HX} y="16" textAnchor="middle" fill="var(--spray-label)" fontSize={size*0.034}>CF</text>
-      <text x={firstX+10} y={firstY} textAnchor="start" fill="var(--spray-label)" fontSize={size*0.03} dominantBaseline="middle">1B</text>
-      <text x={thirdX-10} y={thirdY} textAnchor="end" fill="var(--spray-label)" fontSize={size*0.03} dominantBaseline="middle">3B</text>
-      <text x={HX} y={secY-10} textAnchor="middle" fill="var(--spray-label)" fontSize={size*0.03}>2B</text>
+      <text x={W*0.09} y={H*0.14} fill={C.label} fontSize={size*0.038} fontWeight="500">LF</text>
+      <text x={W*0.91} y={H*0.14} textAnchor="end" fill={C.label} fontSize={size*0.038} fontWeight="500">RF</text>
+      <text x={HX} y={H*0.07} textAnchor="middle" fill={C.label} fontSize={size*0.038} fontWeight="500">CF</text>
+      <text x={HX} y={H*0.5} textAnchor="middle" fill={C.label} fontSize={size*0.032} opacity="0.7">HR</text>
+
       {/* Heatmap overlay */}
       {showHeatmap && hits.length > 0 && (() => {
-        const cells = 12;
-        const cw = W / cells, ch = H / cells;
-        const grid = Array.from({length:cells}, () => Array(cells).fill(0));
+        const cells = 12, cw = W/cells, ch = H/cells;
+        const grid = Array.from({length:cells},()=>Array(cells).fill(0));
         hits.forEach(hit => {
-          const nx = hit.x * W / (hit.w || 320);
-          const ny = hit.y * H / (hit.h || 281);
-          const ci = Math.floor(nx / cw), ri = Math.floor(ny / ch);
-          if (ci >= 0 && ci < cells && ri >= 0 && ri < cells) grid[ri][ci]++;
+          const nx = hit.x * W / (hit.w||320), ny = hit.y * H / (hit.h||281);
+          const ci = Math.floor(nx/cw), ri = Math.floor(ny/ch);
+          if (ci>=0&&ci<cells&&ri>=0&&ri<cells) grid[ri][ci]++;
         });
-        const max = Math.max(...grid.flat(), 1);
-        return grid.flatMap((row, ri) => row.map((val, ci) => {
-          if (val === 0) return null;
-          const opacity = (val / max) * 0.7;
+        const max = Math.max(...grid.flat(),1);
+        return grid.flatMap((row,ri) => row.map((val,ci) => {
+          if (!val) return null;
           return <rect key={`h${ri}-${ci}`} x={ci*cw} y={ri*ch} width={cw} height={ch}
-            fill={`rgba(220,50,50,${opacity})`} rx="2"/>;
+            fill={`rgba(220,50,50,${(val/max)*0.7})`} rx="2"/>;
         }));
       })()}
-      {/* Hit direction zones (pull/center/oppo) — subtle lines */}
-      {hits.length > 0 && (() => {
-        // Pull side depends on handedness: R batter pulls to left field, L batter to right
-        const pullAngle = handedness === 'L' ? 45 : -45; // degrees from center
-        return null; // zones shown via dot colors instead
-      })()}
-      {/* Hot/cold zones overlay */}
+
+      {/* Hot/cold zones */}
       {showZones && hits.length > 0 && (() => {
         const zones = calcHotColdZones(hits);
         const zoneCoords = [
-          // deep row: LF, CF, RF
-          {x:0,       y:0,        w:W*0.38, h:H*0.5},
-          {x:W*0.38,  y:0,        w:W*0.24, h:H*0.5},
-          {x:W*0.62,  y:0,        w:W*0.38, h:H*0.5},
-          // short row: LF, CF, RF
-          {x:0,       y:H*0.5,    w:W*0.38, h:H*0.5},
-          {x:W*0.38,  y:H*0.5,    w:W*0.24, h:H*0.5},
-          {x:W*0.62,  y:H*0.5,    w:W*0.38, h:H*0.5},
+          {x:0,y:0,w:W*0.38,h:H*0.5},{x:W*0.38,y:0,w:W*0.24,h:H*0.5},{x:W*0.62,y:0,w:W*0.38,h:H*0.5},
+          {x:0,y:H*0.5,w:W*0.38,h:H*0.5},{x:W*0.38,y:H*0.5,w:W*0.24,h:H*0.5},{x:W*0.62,y:H*0.5,w:W*0.38,h:H*0.5},
         ];
-        const avgs = zones.map(z => z.avg);
-        const maxAvg = Math.max(...avgs.filter(v=>v!==null), 0.001);
-        return zones.map((z, i) => {
-          if (z.ab === 0) return null;
-          const avg = z.avg;
-          const avgStr = avg !== null ? '.'+Math.round(avg*1000).toString().padStart(3,'0') : '—';
-          // Color: hot=green, cold=red, based on avg
-          const intensity = avg / maxAvg;
-          const r = Math.round(197 * (1 - intensity));
-          const g2 = Math.round(103 * intensity);
-          const coord = zoneCoords[i];
+        const maxAvg = Math.max(...zones.map(z=>z.avg||0),0.001);
+        return zones.map((z,i) => {
+          if (!z.ab) return null;
+          const avgStr = z.avg!==null ? '.'+Math.round(z.avg*1000).toString().padStart(3,'0') : '—';
+          const intensity = (z.avg||0)/maxAvg;
+          const r = Math.round(197*(1-intensity)), g2 = Math.round(103*intensity);
+          const c = zoneCoords[i];
           return (
             <g key={i}>
-              <rect x={coord.x} y={coord.y} width={coord.w} height={coord.h}
-                fill={`rgba(${r},${g2},0,0.25)`} stroke={`rgba(${r},${g2},0,0.4)`} strokeWidth="1"/>
-              <text x={coord.x + coord.w/2} y={coord.y + coord.h/2 - 6} textAnchor="middle" dominantBaseline="middle"
-                fontSize={size*0.038} fontWeight="700" fill={`rgb(${r},${g2},0)`}>{avgStr}</text>
-              <text x={coord.x + coord.w/2} y={coord.y + coord.h/2 + 10} textAnchor="middle"
-                fontSize={size*0.028} fill={`rgb(${r},${g2},0)`}>{z.ab} AB</text>
+              <rect x={c.x} y={c.y} width={c.w} height={c.h} fill={`rgba(${r},${g2},0,0.25)`} stroke={`rgba(${r},${g2},0,0.4)`} strokeWidth="1"/>
+              <text x={c.x+c.w/2} y={c.y+c.h/2-6} textAnchor="middle" dominantBaseline="middle" fontSize={size*0.038} fontWeight="700" fill={`rgb(${r},${g2},0)`}>{avgStr}</text>
+              <text x={c.x+c.w/2} y={c.y+c.h/2+10} textAnchor="middle" fontSize={size*0.028} fill={`rgb(${r},${g2},0)`}>{z.ab} AB</text>
             </g>
           );
         });
       })()}
-      {/* Previous hits (display mode) */}
-      {hits.map((hit, i) => (
-        <circle key={i} cx={hit.x * W / (hit.w || 320)} cy={hit.y * H / (hit.h || 281)}
-          r="5" fill={COUNTS_AS_HIT.has(hit.outcome) ? '#276749' : '#c53030'} fillOpacity="0.75"
-          stroke={COUNTS_AS_HIT.has(hit.outcome) ? '#1a4d34' : '#9b2222'} strokeWidth="1"/>
+
+      {/* Previous hits */}
+      {hits.map((hit,i) => (
+        <circle key={i} cx={hit.x*W/(hit.w||320)} cy={hit.y*H/(hit.h||281)}
+          r="5" fill={COUNTS_AS_HIT.has(hit.outcome)?'#276749':'#c53030'} fillOpacity="0.8"
+          stroke={COUNTS_AS_HIT.has(hit.outcome)?'#1a4d34':'#9b2222'} strokeWidth="1"/>
       ))}
-      {/* Active plotted point */}
+
+      {/* Plotted point */}
       {plotted && (
         <g>
-          <circle cx={plotted.x} cy={plotted.y} r="9" fill="var(--spray-plot)" fillOpacity="0.15" stroke="var(--spray-plot)" strokeWidth="1.5"/>
-          <circle cx={plotted.x} cy={plotted.y} r="5" fill="var(--spray-plot)"/>
+          <circle cx={plotted.x} cy={plotted.y} r="10" fill="#1e3a5f" fillOpacity="0.15" stroke="#1e3a5f" strokeWidth="1.5"/>
+          <circle cx={plotted.x} cy={plotted.y} r="5" fill="#1e3a5f"/>
         </g>
-      )}
-      {interactive && !plotted && (
-        <text x={HX} y={HY - D - 20} textAnchor="middle" fill="var(--spray-tap)" fontSize={size*0.038} fontStyle="italic">tap to place hit</text>
       )}
     </svg>
   );
@@ -1207,8 +1235,9 @@ function GamesPage({ uid, setPage, setGameId, active }) {
     ? games.filter(g => {
         const res = getResult(g);
         const resLabel = res?.label || '';
+        // Whole-word match for result terms only
         const resWords = resLabel === 'W' ? ['w','win','won'] : resLabel === 'L' ? ['l','loss','lost'] : resLabel === 'T' ? ['t','tie','tied','draw'] : [];
-        if (resWords.some(w => w === searchLower || w.startsWith(searchLower))) return true;
+        if (resWords.includes(searchLower)) return true;
         const fields = [
           g.opponent, g.park, g.teamName, g.season, g.league, g.tier,
           g.homeAway, g.dayNight, g.comments,
@@ -1583,19 +1612,17 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
 
   // Outcome tile colours
   const tileStyle = (group, active) => {
-    const base = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 14px', borderRadius:8, border:'1.5px solid', cursor:'pointer', fontSize:14, fontWeight:500, transition:'all 0.1s', userSelect:'none' };
+    const base = { display:'flex', alignItems:'center', justifyContent:'center', padding:'11px 14px', borderRadius:8, border:'1.5px solid', cursor:'pointer', fontSize:14, fontWeight:500, transition:'all 0.1s', userSelect:'none', textAlign:'center' };
     if (active) {
-      if (group==='hit')   return {...base, background:'#d1fae5', borderColor:'#6ee7b7', color:'#065f46'};
-      if (group==='out')   return {...base, background:'#fee2e2', borderColor:'#fca5a5', color:'#991b1b'};
-      if (group==='other') return {...base, background:'#dbeafe', borderColor:'#93c5fd', color:'#1e40af'};
+      if (group==='hit')   return {...base, background:'#059669', borderColor:'#047857', color:'#fff'};
+      if (group==='out')   return {...base, background:'#dc2626', borderColor:'#b91c1c', color:'#fff'};
+      if (group==='other') return {...base, background:'#2563eb', borderColor:'#1d4ed8', color:'#fff'};
     }
+    // Unselected — light tinted background
+    if (group==='hit')   return {...base, background:'#d1fae5', borderColor:'#6ee7b7', color:'#065f46'};
+    if (group==='out')   return {...base, background:'#fee2e2', borderColor:'#fca5a5', color:'#991b1b'};
+    if (group==='other') return {...base, background:'#dbeafe', borderColor:'#93c5fd', color:'#1e40af'};
     return {...base, background:'var(--surface)', borderColor:'var(--border)', color:'var(--text)'};
-  };
-
-  const OUTCOME_ABBREVS = {
-    'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR',
-    'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO','Pop Out':'PO','Foul Out':'FO','Double Play':'DP',
-    'Walk':'BB','Hit By Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH','Reach on Error':'ROE',"Fielder's Choice":'FC'
   };
 
   const OTile = ({ label, group }) => {
@@ -1603,7 +1630,6 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     return (
       <div style={tileStyle(group, active)} onClick={() => setOutcome(label)}>
         <span>{label}</span>
-        <span style={{fontSize:12, fontWeight:700, opacity:0.6}}>{OUTCOME_ABBREVS[label]||''}</span>
       </div>
     );
   };
@@ -1749,6 +1775,39 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [confirmAB, setConfirmAB] = useState(null);
   const [confirmGame, setConfirmGame] = useState(false);
+  const [showFieldingForm, setShowFieldingForm] = useState(false);
+  const [fieldingEntries, setFieldingEntries] = useState([]);
+  const [fieldingForm, setFieldingForm] = useState({ position:'', putouts:0, assists:0, errors:0, notes:'' });
+  const [editFieldingId, setEditFieldingId] = useState(null);
+
+  const fieldingCol = () => gamesCol(uid).doc(gameId).collection('fielding');
+
+  const loadFielding = () => fieldingCol().orderBy('createdAt','asc').get()
+    .then(s => setFieldingEntries(s.docs.map(d=>({id:d.id,...d.data()}))));
+
+  const saveFielding = async () => {
+    const data = { ...fieldingForm, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (editFieldingId) {
+      await fieldingCol().doc(editFieldingId).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await fieldingCol().add(data);
+    }
+    setShowFieldingForm(false);
+    setEditFieldingId(null);
+    setFieldingForm({ position:'', putouts:0, assists:0, errors:0, notes:'' });
+    loadFielding();
+  };
+
+  const deleteFielding = async id => {
+    await fieldingCol().doc(id).delete(); loadFielding();
+  };
+
+  const startEditFielding = entry => {
+    setFieldingForm({ position: entry.position||'', putouts: entry.putouts||0, assists: entry.assists||0, errors: entry.errors||0, notes: entry.notes||'' });
+    setEditFieldingId(entry.id);
+    setShowFieldingForm(true);
+  };
 
   const loadGame = () => gamesCol(uid).doc(gameId).get().then(d => {
     const g = {id:d.id,...d.data()};
@@ -1758,7 +1817,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const loadABs = () => absCol(uid,gameId).orderBy('timestamp','asc').get().then(s => { setAbs(s.docs.map(d=>({id:d.id,...d.data()}))); setLoading(false); });
 
   useEffect(() => {
-    loadGame(); loadABs();
+    loadGame(); loadABs(); loadFielding();
     batsCol(uid).get().then(s => setBats(s.docs.map(d=>({id:d.id,...d.data()}))));
     userDoc(uid).get().then(d => { if (d.exists && d.data().profile) setProfile(d.data().profile); });
   }, [uid, gameId]);
@@ -1810,6 +1869,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         <button onClick={() => setPage(prevPage)} style={S.backBtn}>← {prevPage === 'gamelog' ? 'Game Log' : prevPage === 'stats' ? 'Stats' : 'Games'}</button>
         <div style={{display:'flex', gap:8}}>
           {!editingGame && <button onClick={()=>setEditingGame(true)} style={S.btnSmall}>Edit Game</button>}
+          {!editingGame && <button onClick={()=>{setShowFieldingForm(true);setEditFieldingId(null);setFieldingForm({position:'',putouts:0,assists:0,errors:0,notes:''}); }} style={S.btnSmall}>+ Fielding</button>}
           {!editingGame && abs.length>0 && <button onClick={()=>generateGamePDF(game,abs,profile)} style={S.btnSmall}>↓ PDF</button>}
           <button onClick={()=>setConfirmGame(true)} style={S.btnDanger}>Delete Game</button>
         </div>
@@ -2063,6 +2123,81 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
         )}
       </div>
+
+      {/* ── Fielding Section ── */}
+      {showFieldingForm && (
+        <div style={{...S.card, border:'1px solid var(--border)', marginTop:16}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
+            <div style={S.cardTitle}>{editFieldingId ? 'Edit Fielding' : 'Record Fielding'}</div>
+            <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null);}} style={S.btnSmall}>Cancel</button>
+          </div>
+          <div style={{...S.formGroup, marginBottom:14}}>
+            <label style={S.label}>Position *</label>
+            <select style={S.select} value={fieldingForm.position} onChange={e=>setFieldingForm(f=>({...f,position:e.target.value}))}>
+              <option value="">— Select position —</option>
+              {['P','C','1B','2B','3B','SS','LF','CF','RF','DH','EH','UTIL'].map(p=>(
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:14}}>
+            {[['putouts','Putouts'],['assists','Assists'],['errors','Errors']].map(([key,lbl])=>(
+              <div key={key}>
+                <label style={{...S.label, display:'block', marginBottom:6}}>{lbl}</label>
+                <div style={{display:'flex', alignItems:'center', gap:8}}>
+                  <button onClick={()=>setFieldingForm(f=>({...f,[key]:Math.max(0,f[key]-1)}))}
+                    style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <i className="fa-solid fa-minus" style={{fontSize:10,color:'var(--text)'}}></i>
+                  </button>
+                  <span style={{fontSize:18,fontWeight:700,minWidth:20,textAlign:'center',color:'var(--text)'}}>{fieldingForm[key]}</span>
+                  <button onClick={()=>setFieldingForm(f=>({...f,[key]:f[key]+1}))}
+                    style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <i className="fa-solid fa-plus" style={{fontSize:10,color:'var(--text)'}}></i>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{...S.formGroup, marginBottom:14}}>
+            <label style={S.label}>Notes</label>
+            <textarea style={{...S.input, height:55, resize:'vertical'}} value={fieldingForm.notes}
+              onChange={e=>setFieldingForm(f=>({...f,notes:e.target.value}))}
+              placeholder="e.g. Made a diving stop at 3B..."/>
+          </div>
+          <button onClick={saveFielding} disabled={!fieldingForm.position} style={S.btnPrimary}>
+            {editFieldingId ? 'Save Changes' : 'Save Fielding'}
+          </button>
+        </div>
+      )}
+
+      {fieldingEntries.length > 0 && (
+        <div style={{...S.card, marginTop:16}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
+            <div style={S.cardTitle}>Fielding</div>
+          </div>
+          <div style={S.list}>
+            {fieldingEntries.map(entry => (
+              <div key={entry.id} style={{...S.listItem, flexDirection:'column', alignItems:'flex-start', gap:6}}>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:10}}>
+                    <span style={{background:'#e2e8f0', color:'#2d3748', fontWeight:700, fontSize:13, padding:'3px 10px', borderRadius:6}}>{entry.position}</span>
+                    <div style={{display:'flex', gap:12, fontSize:13, color:'var(--text)'}}>
+                      <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>PO </span><strong>{entry.putouts||0}</strong></span>
+                      <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>A </span><strong>{entry.assists||0}</strong></span>
+                      <span><span style={{color:entry.errors>0?'#c53030':'var(--muted)', fontSize:11, fontWeight:600}}>E </span><strong style={{color:entry.errors>0?'#c53030':'var(--text)'}}>{entry.errors||0}</strong></span>
+                    </div>
+                  </div>
+                  <div style={{display:'flex', gap:6}}>
+                    <button onClick={()=>startEditFielding(entry)} style={S.btnSmall}>Edit</button>
+                    <button onClick={()=>deleteFielding(entry.id)} style={S.btnDanger}>Delete</button>
+                  </div>
+                </div>
+                {entry.notes && <p style={{...S.muted, fontSize:12, fontStyle:'italic', margin:0}}>{entry.notes}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
