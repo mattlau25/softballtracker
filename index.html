@@ -981,9 +981,9 @@ function BatsPage({ uid }) {
     <div style={{...S.listItem, opacity: archived ? 0.65 : 1}}>
       {!archived && (
         <button onClick={() => toggleFavourite(bat)}
-          style={{background:'none', border:'none', cursor:'pointer', fontSize:18, lineHeight:1, flexShrink:0, color: bat.favourite ? '#f59e0b' : '#cbd5e0', padding:'0 4px'}}
+          style={{background:'none', border:'none', cursor:'pointer', fontSize:16, lineHeight:1, flexShrink:0, padding:'0 4px', color: bat.favourite ? '#f59e0b' : '#cbd5e0'}}
           title={bat.favourite ? 'Remove from favourites' : 'Add to favourites'}>
-          {bat.favourite ? '★' : '☆'}
+          <i className={`fa-${bat.favourite ? 'solid' : 'regular'} fa-star`}></i>
         </button>
       )}
       <div style={{flex:1}}>
@@ -1205,19 +1205,18 @@ function GamesPage({ uid, setPage, setGameId, active }) {
   const searchLower = search.toLowerCase().trim();
   const filteredGames = searchLower
     ? games.filter(g => {
+        const res = getResult(g);
+        const resLabel = res?.label || '';
+        const resWords = resLabel === 'W' ? ['w','win','won'] : resLabel === 'L' ? ['l','loss','lost'] : resLabel === 'T' ? ['t','tie','tied','draw'] : [];
+        if (resWords.some(w => w === searchLower || w.startsWith(searchLower))) return true;
         const fields = [
           g.opponent, g.park, g.teamName, g.season, g.league, g.tier,
           g.homeAway, g.dayNight, g.comments,
-          g.date,                          // e.g. "2026-05-04"
-          fmtDate(g.date),                 // e.g. "Mon, May 4, 2026"
-          getDayOfWeek(g.date),            // e.g. "Monday"
-          g.time ? fmtTime(g.time) : '',   // e.g. "7:30PM"
-          g.time,                          // e.g. "19:30"
+          g.date, fmtDate(g.date), getDayOfWeek(g.date),
+          g.time ? fmtTime(g.time) : '', g.time,
           g.myScore !== undefined ? String(g.myScore) : '',
           g.oppScore !== undefined ? String(g.oppScore) : '',
-          g.myScore !== undefined && g.oppScore !== undefined
-            ? `${g.myScore}-${g.oppScore}` : '',
-          // year
+          g.myScore !== undefined && g.oppScore !== undefined ? `${g.myScore}-${g.oppScore}` : '',
           g.date ? g.date.slice(0,4) : '',
         ].filter(Boolean);
         return fields.some(f => f.toLowerCase().includes(searchLower));
@@ -1458,7 +1457,6 @@ function BatDropdown({ bats, value, onChange }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
 
-  // Close on outside click
   React.useEffect(() => {
     const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
@@ -1478,13 +1476,10 @@ function BatDropdown({ bats, value, onChange }) {
 
   const BatOption = ({ bat }) => (
     <div onClick={() => { onChange(bat.id); setOpen(false); }}
-      style={{padding:'10px 14px', cursor:'pointer', background: value===bat.id ? 'var(--border2)' : 'transparent',
-        borderBottom:'1px solid var(--border2)'}}
+      style={{padding:'10px 14px', cursor:'pointer', background: value===bat.id ? 'var(--border2)' : 'transparent', borderBottom:'1px solid var(--border2)'}}
       onMouseEnter={e => e.currentTarget.style.background='var(--border2)'}
       onMouseLeave={e => e.currentTarget.style.background = value===bat.id ? 'var(--border2)' : 'transparent'}>
-      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>
-        {bat.favourite ? '⭐ ' : ''}{bat.name}
-      </div>
+      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>{bat.name}</div>
       {batSubline(bat) && <div style={{fontSize:12, color:'var(--muted)', marginTop:2}}>{batSubline(bat)}</div>}
     </div>
   );
@@ -1496,7 +1491,7 @@ function BatDropdown({ bats, value, onChange }) {
         <div>
           {selected ? (
             <>
-              <div style={{fontSize:14, color:'var(--text)'}}>{selected.favourite ? '⭐ ' : ''}{selected.name}</div>
+              <div style={{fontSize:14, color:'var(--text)', fontWeight: selected.favourite ? 600 : 400}}>{selected.name}</div>
               {batSubline(selected) && <div style={{fontSize:12, color:'var(--muted)'}}>{batSubline(selected)}</div>}
             </>
           ) : <span style={{color:'var(--muted)'}}>— Select bat —</span>}
@@ -1515,8 +1510,8 @@ function BatDropdown({ bats, value, onChange }) {
           </div>
           {activeFavs.length > 0 && (
             <>
-              <div style={{padding:'6px 14px 4px', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.06em', background:'var(--surface2)'}}>
-                ⭐ Favourites
+              <div style={{padding:'6px 14px 4px', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.06em', background:'var(--surface2)', display:'flex', alignItems:'center', gap:6}}>
+                <i className="fa-solid fa-star" style={{color:'#f59e0b', fontSize:10}}></i> Favourites
               </div>
               {activeFavs.map(b => <BatOption key={b.id} bat={b}/>)}
             </>
@@ -1537,9 +1532,9 @@ function BatDropdown({ bats, value, onChange }) {
 }
 
 // ─── AB FORM ───────────────────────────────────────────────────────────────────
-function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defaultPosition='' }) {
+function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' }) {
   const isEdit = !!ab;
-  const blank = { batId:'', outcome:'', subOutcome:'', bases:0, rbi:0, runScored:false, spray:null, comments:'', position: defaultPosition, putouts:0, assists:0, errors:0 };
+  const blank = { batId:'', outcome:'', subOutcome:'', bases:0, rbi:0, trajectory:'', spray:null, comments:'' };
   const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
   const [dirty, setDirty] = useState(false);
   const [toast, setToast] = useState(null);
@@ -1553,9 +1548,13 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
   const showBases = ['Reach on Error', "Fielder's Choice"].includes(f.outcome);
   const autoBase = HIT_BASES[f.outcome] || null;
   const showRBI = f.outcome && !['Strikeout'].includes(f.outcome) && !isFoulK && !(isFoulOut && !f.subOutcome);
-  const showRunScored = f.outcome && !isFoulK && !(isFoulOut && !f.subOutcome);
 
-  const setOutcome = (o) => { haptic('light'); setF(x => ({...x, outcome: o, subOutcome:'', spray: null, bases: HIT_BASES[o] || 0})); setDirty(true); };
+  // Change outcome but preserve spray placement
+  const setOutcome = (o) => {
+    haptic('light');
+    setF(x => ({...x, outcome: o, subOutcome:'', bases: HIT_BASES[o] || 0}));
+    setDirty(true);
+  };
 
   const handleCancel = () => {
     if (dirty && !isEdit) {
@@ -1577,29 +1576,40 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
     if (isEdit) await absCol(uid, gameId).doc(ab.id).update(data);
     else await absCol(uid, gameId).add(data);
     haptic('success');
-    // Show toast
-    const toastMsg = f.outcome + (f.rbi > 0 ? `, ${f.rbi} RBI` : '') + (f.runScored ? ', R' : '');
+    const toastMsg = f.outcome + (f.rbi > 0 ? `, ${f.rbi} RBI` : '');
     setToast(toastMsg);
     setTimeout(() => { setToast(null); onSave(); }, 1800);
   };
 
-  const OBtn = ({ label, group }) => {
-    const active = f.outcome === label;
-    const baseStyle = quickMode
-      ? { ...S.outBtn, padding:'14px 16px', fontSize:14, flex:'1 1 auto', textAlign:'center', minWidth:80 }
-      : S.outBtn;
-    const style = active ? (group === 'hit' ? {...baseStyle,...S.outBtnHit} : group === 'out' ? {...baseStyle,...S.outBtnOut} : {...baseStyle,...S.outBtnOther}) : baseStyle;
-    return <button style={style} onClick={() => setOutcome(label)}>{label}</button>;
+  // Outcome tile colours
+  const tileStyle = (group, active) => {
+    const base = { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 14px', borderRadius:8, border:'1.5px solid', cursor:'pointer', fontSize:14, fontWeight:500, transition:'all 0.1s', userSelect:'none' };
+    if (active) {
+      if (group==='hit')   return {...base, background:'#d1fae5', borderColor:'#6ee7b7', color:'#065f46'};
+      if (group==='out')   return {...base, background:'#fee2e2', borderColor:'#fca5a5', color:'#991b1b'};
+      if (group==='other') return {...base, background:'#dbeafe', borderColor:'#93c5fd', color:'#1e40af'};
+    }
+    return {...base, background:'var(--surface)', borderColor:'var(--border)', color:'var(--text)'};
   };
-  const SubBtn = ({ label, val }) => {
-    const active = f.subOutcome === val;
-    return <button style={{...S.outBtn, ...(active ? S.outBtnOut : {}), ...(quickMode?{padding:'12px 14px',fontSize:13}:{})}} onClick={() => { haptic('light'); upd('subOutcome', val); }}>{label}</button>;
-  };
-  const BaseBtn = ({ n }) => (
-    <button style={{...S.outBtn, ...(f.bases===n ? S.outBtnHit : {}), ...(quickMode?{padding:'12px 16px',fontSize:14}:{})}} onClick={() => upd('bases', n)}>{n}B</button>
-  );
 
-  // Toast overlay
+  const OUTCOME_ABBREVS = {
+    'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR',
+    'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO','Pop Out':'PO','Foul Out':'FO','Double Play':'DP',
+    'Walk':'BB','Hit By Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH','Reach on Error':'ROE',"Fielder's Choice":'FC'
+  };
+
+  const OTile = ({ label, group }) => {
+    const active = f.outcome === label;
+    return (
+      <div style={tileStyle(group, active)} onClick={() => setOutcome(label)}>
+        <span>{label}</span>
+        <span style={{fontSize:12, fontWeight:700, opacity:0.6}}>{OUTCOME_ABBREVS[label]||''}</span>
+      </div>
+    );
+  };
+
+  const TRAJECTORIES = ['Ground Ball','Line Drive','Fly Ball','Pop Up','Bunt'];
+
   if (toast) return (
     <div style={{...S.card, border:'1px solid var(--success)', background:'rgba(39,103,73,0.08)', textAlign:'center', padding:'24px 16px'}}>
       <div style={{fontSize:13, color:'var(--muted)', marginBottom:4}}>Saved</div>
@@ -1610,31 +1620,35 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
   return (
     <div style={{...S.card, border:'1px solid var(--border)'}}>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
-        <div style={S.cardTitle}>{isEdit ? 'Edit At Bat' : quickMode ? 'Quick AB' : 'Record At Bat'}</div>
+        <div style={S.cardTitle}>{isEdit ? 'Edit At Bat' : 'Record At Bat'}</div>
       </div>
 
       {/* Bat */}
-      {!quickMode && (
-        <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={S.label}>Bat Used</label>
-          <BatDropdown bats={bats} value={f.batId} onChange={id => upd('batId', id)}/>
-        </div>
-      )}
+      <div style={{...S.formGroup, marginBottom:16}}>
+        <label style={S.label}>Bat Used</label>
+        <BatDropdown bats={bats} value={f.batId} onChange={id => upd('batId', id)}/>
+      </div>
 
-      {/* Outcome picker */}
+      {/* Outcome tiles */}
       <div style={{marginBottom:16}}>
         <label style={{...S.label, display:'block', marginBottom:10}}>Outcome *</label>
         <div style={S.outGrp}>
           <div style={S.outGrpLabel}>Hits</div>
-          <div style={{...S.outBtns, ...(quickMode?{gap:8}:{})}}>{HIT_OUTCOMES.map(o => <OBtn key={o} label={o} group="hit"/>)}</div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+            {HIT_OUTCOMES.map(o => <OTile key={o} label={o} group="hit"/>)}
+          </div>
         </div>
         <div style={S.outGrp}>
           <div style={S.outGrpLabel}>Outs</div>
-          <div style={{...S.outBtns, ...(quickMode?{gap:8}:{})}}>{OUT_OUTCOMES.map(o => <OBtn key={o} label={o} group="out"/>)}</div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+            {OUT_OUTCOMES.map(o => <OTile key={o} label={o} group="out"/>)}
+          </div>
         </div>
         <div style={S.outGrp}>
           <div style={S.outGrpLabel}>Other</div>
-          <div style={{...S.outBtns, ...(quickMode?{gap:8}:{})}}>{OTHER_OUTCOMES.map(o => <OBtn key={o} label={o} group="other"/>)}</div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+            {OTHER_OUTCOMES.map(o => <OTile key={o} label={o} group="other"/>)}
+          </div>
         </div>
       </div>
 
@@ -1643,8 +1657,8 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
         <div style={{...S.formGroup, marginBottom:16}}>
           <label style={S.label}>Foul Out Type</label>
           <div style={S.outBtns}>
-            <SubBtn label="Foul Caught (by fielder)" val="caught"/>
-            <SubBtn label="Foul Strikeout (not caught)" val="strikeout"/>
+            <button style={{...S.outBtn, ...(f.subOutcome==='caught'?S.outBtnOut:{})}} onClick={() => { haptic('light'); upd('subOutcome','caught'); }}>Foul Caught (by fielder)</button>
+            <button style={{...S.outBtn, ...(f.subOutcome==='strikeout'?S.outBtnOut:{})}} onClick={() => { haptic('light'); upd('subOutcome','strikeout'); }}>Foul Strikeout (not caught)</button>
           </div>
         </div>
       )}
@@ -1653,14 +1667,14 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
       {showBases && (
         <div style={{...S.formGroup, marginBottom:16}}>
           <label style={S.label}>Bases Reached</label>
-          <div style={S.outBtns}>{[1,2,3].map(n => <BaseBtn key={n} n={n}/>)}</div>
+          <div style={S.outBtns}>{[1,2,3].map(n => <button key={n} style={{...S.outBtn, ...(f.bases===n?S.outBtnHit:{})}} onClick={() => upd('bases',n)}>{n}B</button>)}</div>
         </div>
       )}
 
-      {/* Spray chart — hidden in quick mode */}
-      {showSpray && !quickMode && (
+      {/* Spray chart */}
+      {showSpray && (
         <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={S.label}>Hit Location {f.spray ? '✓ placed' : '— tap the field'}</label>
+          <label style={{...S.label, display:'block', marginBottom:8}}>Hit Location</label>
           <div style={{display:'flex', justifyContent:'center', background:'var(--spray-bg)', borderRadius:10, padding:12, border:'1px solid var(--border)'}}>
             <SprayChart onPlot={pt => upd('spray', {...pt, w:320, h:281})} plotted={f.spray} interactive={true} size={300}/>
           </div>
@@ -1668,59 +1682,51 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
         </div>
       )}
 
-      {/* RBI + Run Scored */}
-      {(showRBI || showRunScored) && (
-        <div style={{...S.formGrid2, marginBottom:16}}>
-          {showRBI && (
-            <div style={S.formGroup}>
-              <label style={S.label}>RBI</label>
-              <input type="number" min="0" max="4" style={{...S.input, maxWidth:90}}
-                value={f.rbi} onChange={e => upd('rbi', Math.max(0, parseInt(e.target.value)||0))}/>
-            </div>
-          )}
-          {showRunScored && (
-            <div style={S.formGroup}>
-              <label style={S.label}>Run Scored?</label>
-              <label style={{...S.checkRow, marginTop:4}}>
-                <input type="checkbox" checked={f.runScored} onChange={e => upd('runScored', e.target.checked)}/>
-                <span>I scored this AB</span>
-              </label>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Fielding — hidden in quick mode */}
-      {!quickMode && (
-        <div style={{borderTop:'1px solid var(--border)', paddingTop:14, marginBottom:14}}>
-          <div style={{...S.label, marginBottom:10, display:'block'}}>Fielding This AB</div>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10}}>
-            <div style={S.formGroup}>
-              <label style={S.label}>Position</label>
-              <select style={S.select} value={f.position} onChange={e => upd('position', e.target.value)}>
-                <option value="">—</option>
-                {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div style={S.formGroup}><label style={S.label}>PO</label><input type="number" min="0" style={S.input} value={f.putouts} onChange={e => upd('putouts', parseInt(e.target.value)||0)}/></div>
-            <div style={S.formGroup}><label style={S.label}>A</label><input type="number" min="0" style={S.input} value={f.assists} onChange={e => upd('assists', parseInt(e.target.value)||0)}/></div>
-            <div style={S.formGroup}><label style={S.label}>E</label><input type="number" min="0" style={S.input} value={f.errors} onChange={e => upd('errors', parseInt(e.target.value)||0)}/></div>
+      {/* Trajectory */}
+      {f.outcome && (
+        <div style={{...S.formGroup, marginBottom:16}}>
+          <label style={{...S.label, display:'block', marginBottom:8}}>Trajectory</label>
+          <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
+            {TRAJECTORIES.map(t => (
+              <button key={t} onClick={() => upd('trajectory', f.trajectory===t ? '' : t)}
+                style={{padding:'7px 14px', borderRadius:20, border:'1.5px solid', cursor:'pointer', fontSize:13, fontWeight:500, transition:'all 0.1s',
+                  background: f.trajectory===t ? '#1e3a5f' : 'var(--surface)',
+                  borderColor: f.trajectory===t ? '#1e3a5f' : 'var(--border)',
+                  color: f.trajectory===t ? '#fff' : 'var(--text)'}}>
+                {t}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Comments — hidden in quick mode */}
-      {!quickMode && (
+      {/* RBI stepper */}
+      {showRBI && (
         <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={S.label}>AB Comments</label>
-          <textarea style={{...S.input, height:65, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Notes about this at bat..."/>
+          <label style={S.label}>RBI</label>
+          <div style={{display:'flex', alignItems:'center', gap:16, marginTop:4}}>
+            <button onClick={() => upd('rbi', Math.max(0, f.rbi-1))}
+              style={{width:36, height:36, borderRadius:8, border:'1.5px solid var(--border)', background:'var(--surface)', cursor:'pointer', fontSize:18, color:'var(--text)', display:'flex', alignItems:'center', justifyContent:'center'}}>
+              <i className="fa-solid fa-minus" style={{fontSize:12}}></i>
+            </button>
+            <span style={{fontSize:20, fontWeight:700, minWidth:24, textAlign:'center', color:'var(--text)'}}>{f.rbi}</span>
+            <button onClick={() => upd('rbi', Math.min(4, f.rbi+1))}
+              style={{width:36, height:36, borderRadius:8, border:'1.5px solid var(--border)', background:'var(--surface)', cursor:'pointer', fontSize:18, color:'var(--text)', display:'flex', alignItems:'center', justifyContent:'center'}}>
+              <i className="fa-solid fa-plus" style={{fontSize:12}}></i>
+            </button>
+          </div>
         </div>
       )}
 
+      {/* Comments */}
+      <div style={{...S.formGroup, marginBottom:16}}>
+        <label style={S.label}>Comments</label>
+        <textarea style={{...S.input, height:65, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Notes about this at bat..."/>
+      </div>
+
       <div style={{display:'flex', gap:10}}>
-        <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)}
-          style={{...S.btnPrimary, ...(quickMode?{flex:1, padding:'14px 18px', fontSize:15}:{})}}>
-          {isEdit ? 'Save Changes' : quickMode ? 'Save AB' : 'Record AB'}
+        <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)} style={S.btnPrimary}>
+          {isEdit ? 'Save Changes' : 'Record AB'}
         </button>
         <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>
       </div>
@@ -1728,7 +1734,6 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, quickMode=false, defa
     </div>
   );
 }
-
 // ─── GAME DETAIL PAGE ──────────────────────────────────────────────────────────
 function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [game, setGame] = useState(null);
@@ -1737,7 +1742,6 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [profile, setProfile] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [quickMode, setQuickMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingGame, setEditingGame] = useState(false);
   const [gameForm, setGameForm] = useState(null);
@@ -1990,14 +1994,13 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
           {!showForm && !editId && (
             <div style={{display:'flex', gap:6}}>
-              <button onClick={()=>{setQuickMode(false);setShowForm(true);}} style={S.btnSmall}>+ Full AB</button>
-              <button onClick={()=>{setQuickMode(true);setShowForm(true);}} style={{...S.btnPrimary, padding:'5px 12px', fontSize:12}}>⚡ Quick AB</button>
+              <button onClick={()=>setShowForm(true)} style={S.btnSmall}>+ Record AB</button>
             </div>
           )}
         </div>
 
         {showForm && (
-          <ABForm uid={uid} gameId={gameId} bats={bats} quickMode={quickMode}
+          <ABForm uid={uid} gameId={gameId} bats={bats}
             defaultPosition={profile.primaryPosition||''}
             onSave={() => { setShowForm(false); loadABs(); }}
             onCancel={() => setShowForm(false)}/>
@@ -2006,7 +2009,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         {loading ? <p style={S.muted}>Loading...</p> : abs.length === 0 && !showForm ? (
           <div style={{...S.empty, padding:'28px 0'}}>
             <p>No at bats recorded yet.</p>
-            <button onClick={() => { setQuickMode(true); setShowForm(true); }} style={{...S.btnPrimary, marginTop:12}}>⚡ Quick AB</button>
+            <button onClick={() => setShowForm(true)} style={{...S.btnPrimary, marginTop:12}}>+ Record First AB</button>
           </div>
         ) : (
           <div style={S.list}>
@@ -2858,6 +2861,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
                   <th onClick={()=>toggleSort('date')} style={{...thS,textAlign:'left',paddingLeft:14}}>Date <SortIcon k="date"/></th>
                   <th style={{...thS,textAlign:'left'}}>Opponent</th>
                   <th style={thS}>Result</th>
+                  <th onClick={()=>toggleSort('rd')}  style={thS}>+/- <SortIcon k="rd"/></th>
                   <th onClick={()=>toggleSort('ab')}  style={thS}>AB <SortIcon k="ab"/></th>
                   <th onClick={()=>toggleSort('h')}   style={thS}>H <SortIcon k="h"/></th>
                   <th onClick={()=>toggleSort('avg')} style={thS}>AVG <SortIcon k="avg"/></th>
@@ -2866,7 +2870,6 @@ function GameLogPage({ uid, setPage, setGameId }) {
                   <th onClick={()=>toggleSort('hr')}  style={thS}>HR <SortIcon k="hr"/></th>
                   <th onClick={()=>toggleSort('bb')}  style={thS}>BB <SortIcon k="bb"/></th>
                   <th onClick={()=>toggleSort('k')}   style={thS}>K <SortIcon k="k"/></th>
-                  <th onClick={()=>toggleSort('rd')}  style={thS}>+/- <SortIcon k="rd"/></th>
                 </tr></thead>
                 <tbody>
                   {sorted.map(game=>{
@@ -2886,11 +2889,11 @@ function GameLogPage({ uid, setPage, setGameId }) {
                           {game.opponent||'—'}{game.park&&<div style={{fontSize:11,color:'var(--muted)'}}>{game.park}</div>}
                         </td>
                         <td style={tdS}>{res?<span style={{background:res.color+'18',color:res.color,borderRadius:6,padding:'3px 8px',fontWeight:700,fontSize:12}}>{res.label} {game.myScore}–{game.oppScore}</span>:'—'}</td>
+                        <td style={{...tdS,color:rd>0?'#276749':rd<0?'#c53030':'#a0aec0',fontWeight:600}}>{isNaN(rd)||rd===-999?'—':rd>0?`+${rd}`:rd}</td>
                         <td style={tdS}>{s.ab}</td>
                         <td style={tdS}>{s.h}</td>
                         <td style={{...tdS,color:'#1e3a5f',fontWeight:600}}>{calcAVG(s.h,s.ab)}</td>
                         <td style={tdS}>{s.r}</td><td style={tdS}>{s.rbi}</td><td style={tdS}>{s.hr}</td><td style={tdS}>{s.bb}</td><td style={tdS}>{s.kTotal}</td>
-                        <td style={{...tdS,color:rd>0?'#276749':rd<0?'#c53030':'#a0aec0',fontWeight:600}}>{isNaN(rd)||rd===-999?'—':rd>0?`+${rd}`:rd}</td>
                       </tr>
                     );
                   })}
