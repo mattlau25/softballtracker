@@ -447,85 +447,96 @@ function calcGameStats(abs, includeKFoulInK) {
 }
 
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
-function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, handedness = 'R' }) {
-  // All coordinates stored and computed in 0-1000 normalized space
-  const NORM = 1000;
+function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showOuts = true }) {
+  const IMG_W = 2839, IMG_H = 2450;
+  const HOME_PX = IMG_W * 0.502;
+  const HOME_PY = IMG_H * 0.870;
 
-  // Normalize a stored point to NORM space
-  // Handles old data (w:320,h:281), new data (w:1000,h:1000), and missing w/h
-  const normX = p => {
-    if (!p) return 0;
-    const w = p.w || 320;
-    // Old SVG data was saved in ~320x281 space
-    // New data saved in 1000x1000 space
-    return p.x * NORM / w;
-  };
-  const normY = p => {
-    if (!p) return 0;
-    const h = p.h || 281;
-    return p.y * NORM / h;
+  const toPx = p => {
+    if (!p) return {x:0, y:0};
+    const w = p.w || 320, h = p.h || 281;
+    return { x: p.x * IMG_W / w, y: p.y * IMG_H / h };
   };
 
   const handleClick = e => {
     if (!interactive) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * NORM);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * NORM);
-    onPlot && onPlot({ x, y, w: NORM, h: NORM });
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * IMG_W);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * IMG_H);
+    onPlot && onPlot({ x, y, w: IMG_W, h: IMG_H });
   };
 
-  // Image natural aspect ratio: 2839 x 2450 = 1.159
-  // SVG overlay must match this exactly
-  const IMG_W = 2839, IMG_H = 2450;
+  const ABBREVS = {
+    'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR',
+    'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO',
+    'Pop Out':'PO','Foul Out':'FOK','Double Play':'DP',
+    'Walk':'BB','Hit By Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH',
+    'Reach on Error':'ROE',"Fielder's Choice":'FC','Error':'E'
+  };
+
+  const dotColor = outcome => {
+    if (outcome === 'Single')   return '#4ade80';
+    if (outcome === 'Double')   return '#22c55e';
+    if (outcome === 'Triple')   return '#16a34a';
+    if (outcome === 'Home Run') return '#15803d';
+    if (COUNTS_AS_HIT.has(outcome)) return '#22c55e';
+    return '#ef4444';
+  };
+  const lineColor = outcome => COUNTS_AS_HIT.has(outcome) ? '#86efac' : '#fca5a5';
+
+  const visibleHits = hits.filter(h => showOuts ? true : COUNTS_AS_HIT.has(h.outcome));
+  const DOT_R = 60, FONT = 38;
+
+  if (showHeatmap) {
+    const cells = 10, cw = IMG_W/cells, ch = IMG_H/cells;
+    const grid = Array.from({length:cells},()=>Array(cells).fill(0));
+    visibleHits.forEach(h => {
+      const p = toPx(h);
+      const ci = Math.min(Math.floor(p.x/cw), cells-1);
+      const ri = Math.min(Math.floor(p.y/ch), cells-1);
+      if (ci>=0&&ri>=0) grid[ri][ci]++;
+    });
+    const max = Math.max(...grid.flat(), 1);
+    return (
+      <div style={{position:'relative', width:'100%', userSelect:'none'}}>
+        <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
+        <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
+          {grid.flatMap((row,ri) => row.map((val,ci) => {
+            if (!val) return null;
+            return <rect key={`h${ri}-${ci}`} x={ci*cw} y={ri*ch} width={cw} height={ch} fill={`rgba(220,50,50,${(val/max)*0.7})`}/>;
+          }))}
+        </svg>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ position:'relative', width:'100%', maxWidth: size === 600 ? '100%' : size, cursor: interactive ? 'crosshair' : 'default', userSelect:'none' }}
+    <div style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none'}}
       onClick={handleClick}>
-      <img src={DIAMOND_URL} alt="field" style={{ width:'100%', display:'block', borderRadius:8 }} draggable={false}/>
-      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`}
-        style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none' }}>
-
-        {/* Heatmap */}
-        {showHeatmap && hits.length > 0 && (() => {
-          const cells = 12;
-          const cw = IMG_W/cells, ch = IMG_H/cells;
-          const grid = Array.from({length:cells},()=>Array(cells).fill(0));
-          hits.forEach(h => {
-            const px = normX(h) / NORM * IMG_W;
-            const py = normY(h) / NORM * IMG_H;
-            const ci = Math.min(Math.floor(px/cw), cells-1);
-            const ri = Math.min(Math.floor(py/ch), cells-1);
-            if (ci>=0 && ri>=0) grid[ri][ci]++;
-          });
-          const max = Math.max(...grid.flat(), 1);
-          return grid.flatMap((row,ri) => row.map((val,ci) => {
-            if (!val) return null;
-            return <rect key={`h${ri}-${ci}`} x={ci*cw} y={ri*ch} width={cw} height={ch}
-              fill={`rgba(220,50,50,${(val/max)*0.65})`} rx="4"/>;
-          }));
-        })()}
-
-        {/* Previous hits */}
-        {hits.map((h,i) => {
-          const px = normX(h) / NORM * IMG_W;
-          const py = normY(h) / NORM * IMG_H;
+      <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
+      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
+        {visibleHits.map((h,i) => {
+          const p = toPx(h);
+          return <line key={`l${i}`} x1={HOME_PX} y1={HOME_PY} x2={p.x} y2={p.y}
+            stroke={lineColor(h.outcome)} strokeWidth="8" opacity="0.6"/>;
+        })}
+        {visibleHits.map((h,i) => {
+          const p = toPx(h);
+          const abbr = ABBREVS[h.outcome] || '?';
           return (
-            <circle key={i} cx={px} cy={py} r={50}
-              fill={COUNTS_AS_HIT.has(h.outcome) ? '#276749' : '#c53030'}
-              fillOpacity="0.85"
-              stroke={COUNTS_AS_HIT.has(h.outcome) ? '#1a4d34' : '#9b2222'}
-              strokeWidth="6"/>
+            <g key={`d${i}`}>
+              <circle cx={p.x} cy={p.y} r={DOT_R} fill={dotColor(h.outcome)} stroke="rgba(255,255,255,0.5)" strokeWidth="5"/>
+              <text x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central"
+                fontSize={FONT} fontWeight="700" fill="white" fontFamily="sans-serif">{abbr}</text>
+            </g>
           );
         })}
-
-        {/* Plotted (interactive) point */}
         {plotted && (() => {
-          const px = normX(plotted) / NORM * IMG_W;
-          const py = normY(plotted) / NORM * IMG_H;
+          const p = toPx(plotted);
           return (
             <g>
-              <circle cx={px} cy={py} r={65} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="8"/>
-              <circle cx={px} cy={py} r={35} fill="#1e3a5f"/>
+              <circle cx={p.x} cy={p.y} r={80} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="10"/>
+              <circle cx={p.x} cy={p.y} r={40} fill="#1e3a5f"/>
             </g>
           );
         })()}
@@ -1548,11 +1559,21 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     return {...base, background:'var(--surface)', borderColor:'var(--border)', color:'var(--text)', fontWeight:400};
   };
 
+  const OUTCOME_ABBREVS = {
+    'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR',
+    'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO','Pop Out':'PO',
+    'Foul Out':'FOK','Double Play':'DP',
+    'Walk':'BB','Hit By Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH',
+    'Reach on Error':'ROE',"Fielder's Choice":'FC','Error':'E'
+  };
+
   const OTile = ({ label, group }) => {
     const active = f.outcome === label;
+    const abbr = OUTCOME_ABBREVS[label];
     return (
-      <div style={tileStyle(group, active)} onClick={() => setOutcome(label)}>
+      <div style={{...tileStyle(group, active), justifyContent:'space-between'}} onClick={() => setOutcome(label)}>
         <span>{label}</span>
+        {abbr && <span style={{fontSize:11, fontWeight:700, opacity: active ? 0.9 : 0.55, marginLeft:8, flexShrink:0}}>{abbr}</span>}
       </div>
     );
   };
@@ -1697,7 +1718,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [editingGame, setEditingGame] = useState(false);
   const [gameForm, setGameForm] = useState(null);
   const [savingGame, setSavingGame] = useState(false);
-  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState('spray');
+  const [showOuts, setShowOuts] = useState(true);
   const [confirmAB, setConfirmAB] = useState(null);
   const [confirmGame, setConfirmGame] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
@@ -1944,46 +1966,6 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         </div>
       )}
 
-      {/* Spray chart + heatmap */}
-      {sprayHits.length > 0 && (
-        <div style={S.card}>
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
-            <div style={S.cardTitle}>Spray Chart — This Game</div>
-            <div style={{display:'flex', gap:4}}>
-              {[['Spray', 'spray'],['Heat', 'heat'],['Zones', 'zones']].map(([label, val]) => (
-                <button key={val} onClick={()=>setShowHeatmap(val)}
-                  style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{label}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{display:'flex', justifyContent:'center', background:'var(--spray-bg)', borderRadius:10, padding:12}}>
-            <SprayChart interactive={false} hits={sprayHits} size={300} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} handedness={handedness}/>
-          </div>
-          <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
-            {sprayHits.length} charted {sprayHits.length===1?'ball':'balls'} · <span style={{color:'#276749'}}>●</span> Hit · <span style={{color:'#c53030'}}>●</span> Out/Other
-          </p>
-          {dirTotal > 0 && (
-            <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid #edf2f7'}}>
-              <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
-              {['Pull','Center','Oppo'].map(dir => {
-                const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
-                return (
-                  <div key={dir} style={{marginBottom:8}}>
-                    <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
-                      <span style={{color:'#4a5568', fontWeight:600}}>{dir}</span>
-                      <span style={{color:'#718096'}}>{dirCounts[dir]} ({pct}%)</span>
-                    </div>
-                    <div style={{height:8, background:'#edf2f7', borderRadius:4, overflow:'hidden'}}>
-                      <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* At Bats */}
       <div style={S.card}>
         <div style={{...S.pageHeader, marginBottom:14}}>
@@ -2166,6 +2148,50 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
         )}
       </div>
+
+      {/* Spray chart — below fielding */}
+      {sprayHits.length > 0 && (
+        <div style={S.card}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
+            <div style={S.cardTitle}>Spray Chart</div>
+            <div style={{display:'flex', gap:6, alignItems:'center'}}>
+              <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
+                <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
+                Show outs
+              </label>
+              {[['Spray','spray'],['Heat','heat']].map(([lbl,val]) => (
+                <button key={val} onClick={()=>setShowHeatmap(val)}
+                  style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
+            <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showOuts={showOuts}/>
+          </div>
+          <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
+            {sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}
+          </p>
+          {dirTotal > 0 && showHeatmap==='spray' && (
+            <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
+              <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
+              {['Pull','Center','Oppo'].map(dir => {
+                const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
+                return (
+                  <div key={dir} style={{marginBottom:8}}>
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
+                      <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
+                      <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
+                    </div>
+                    <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
+                      <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
