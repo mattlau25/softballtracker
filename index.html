@@ -3271,35 +3271,21 @@ async function saveFilters(uid, key, value) {
 
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
 // ─── URL ROUTING HELPERS ───────────────────────────────────────────────────────
-// BASE is the repo subdirectory, e.g. "/softball-tracker" on GitHub Pages, "" on custom domain/local
-const BASE = (function() {
-  if (window.location.protocol === 'file:' ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1') return '';
-  const path = window.location.pathname;
-  const knownPages = ['/game/','/games','/stats','/gamelog','/trends','/seasons','/bats','/profile','/new-game'];
-  const match = path.match(/^(\/[^\/]+)/);
-  if (match) {
-    const candidate = match[1];
-    if (!knownPages.some(p => path.startsWith(candidate + p) || path === candidate + '/' || path === candidate)) {
-      return candidate;
-    }
-  }
-  return '';
-})();
+// Hash-based routing: #games, #gamelog, #game/abc123
+// Hash URLs are never sent to the server, so they work perfectly on GitHub Pages.
 
 function pageToPath(page, gameId = null) {
-  if (page === 'game-detail' && gameId) return `${BASE}/game/${gameId}`;
-  if (page === 'games' || !page) return `${BASE}/`;
-  return `${BASE}/${page}`;
+  if (page === 'game-detail' && gameId) return `#game/${gameId}`;
+  if (page === 'games' || !page) return '#games';
+  return `#${page}`;
 }
 
-function getPageFromPath() {
-  const path = window.location.pathname.replace(BASE, '').replace(/^\//, '');
-  if (!path || path === '' || path === 'index.html') return { page: 'games', gameId: null };
-  if (path.startsWith('game/')) return { page: 'game-detail', gameId: path.slice(5) };
+function getPageFromHash() {
+  const hash = window.location.hash.slice(1); // remove #
+  if (!hash) return { page: 'games', gameId: null };
+  if (hash.startsWith('game/')) return { page: 'game-detail', gameId: hash.slice(5) };
   const validPages = ['games','stats','gamelog','trends','seasons','bats','profile','new-game'];
-  if (validPages.includes(path)) return { page: path, gameId: null };
+  if (validPages.includes(hash)) return { page: hash, gameId: null };
   return { page: 'games', gameId: null };
 }
 
@@ -3308,18 +3294,18 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   // Derive page and gameId from URL hash
-  const [routeState, setRouteState] = useState(() => getPageFromPath());
+  const [routeState, setRouteState] = useState(() => getPageFromHash());
   const page = routeState.page;
   const gameId = routeState.gameId;
   const [prevPage, setPrevPage] = useState('games');
 
-  // Listen for browser back/forward
+  // Listen for hash changes (back/forward and direct hash navigation)
   useEffect(() => {
-    const onPop = () => setRouteState(getPageFromPath());
-    window.addEventListener('popstate', onPop);
+    const onHash = () => setRouteState(getPageFromHash());
+    window.addEventListener('hashchange', onHash);
     // Set initial hash if none
     if (!window.location.hash) window.location.hash = 'games';
-    return () => window.removeEventListener('popstate', onPop);
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   const navigate = (newPage, gId = null) => {
@@ -3328,7 +3314,7 @@ function App() {
     }
     const resolvedGameId = gId !== null ? gId : gameId;
     const newHash = pageToPath(newPage, resolvedGameId);
-    window.history.pushState({ page: newPage, gameId: resolvedGameId }, '', newHash);
+    window.location.hash = newHash.slice(1); // strip the leading #
     setRouteState({ page: newPage, gameId: resolvedGameId });
   };
 
