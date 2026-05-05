@@ -449,8 +449,8 @@ function calcGameStats(abs, includeKFoulInK) {
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, showOuts = true }) {
   const IMG_W = 2839, IMG_H = 2450;
-  const HOME_PX = IMG_W * 0.4972;
-  const HOME_PY = IMG_H * 0.830;
+  const HOME_PX = IMG_W * 0.49595;
+  const HOME_PY = IMG_H * 0.80571;
 
   const toPx = p => {
     if (!p) return {x:0, y:0};
@@ -482,12 +482,16 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
   };
 
   const dotColor = outcome => {
-    if (outcome === 'Single')   return '#4ade80';
-    if (outcome === 'Double')   return '#22c55e';
-    if (outcome === 'Triple')   return '#16a34a';
-    if (outcome === 'Home Run') return '#15803d';
+    if (outcome === 'Single')   return '#86efac';  // light green
+    if (outcome === 'Double')   return '#22c55e';  // mid green
+    if (outcome === 'Triple')   return '#16a34a';  // dark green
+    if (outcome === 'Home Run') return '#14532d';  // very dark green
     if (COUNTS_AS_HIT.has(outcome)) return '#22c55e';
-    return '#ef4444';
+    return '#ef4444';  // red for outs
+  };
+  const dotTextColor = outcome => {
+    if (outcome === 'Single') return '#14532d';  // dark text on light bg
+    return 'white';
   };
   const lineColor = outcome => COUNTS_AS_HIT.has(outcome) ? '#86efac' : '#fca5a5';
 
@@ -534,7 +538,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
             <g key={`d${i}`}>
               <circle cx={p.x} cy={p.y} r={DOT_R} fill={dotColor(h.outcome)} stroke="rgba(255,255,255,0.5)" strokeWidth="5"/>
               <text x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central"
-                fontSize={FONT} fontWeight="700" fill="white" fontFamily="sans-serif">{abbr}</text>
+                fontSize={FONT} fontWeight="700" fill={dotTextColor(h.outcome)} fontFamily="sans-serif">{abbr}</text>
             </g>
           );
         })}
@@ -1979,8 +1983,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* At Bats */}
       <div style={S.card}>
         <div style={{...S.pageHeader, marginBottom: abCollapsed ? 0 : 14}}>
-          <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setAbCollapsed(c=>!c)}>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setAbCollapsed(c=>!c)}>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, marginTop:1}}></i>
             <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
           </div>
           {!abCollapsed && !showForm && !editId && (
@@ -2072,8 +2076,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {sprayHits.length > 0 && (
         <div style={{...S.card, marginTop:16}}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: sprayCollapsed ? 0 : 12}}>
-            <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-              <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+            <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+              <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, marginTop:1}}></i>
               <div style={S.sectionTitle}>Spray Chart</div>
             </div>
             {!sprayCollapsed && (
@@ -2123,8 +2127,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Fielding Card — always visible ── */}
       <div style={{...S.card, marginTop:16}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: fieldingCollapsed ? 0 : (showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0))}}>
-          <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setFieldingCollapsed(c=>!c)}>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setFieldingCollapsed(c=>!c)}>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, marginTop:1}}></i>
             <div style={S.sectionTitle}>Fielding</div>
           </div>
           {!fieldingCollapsed && !showFieldingForm && (
