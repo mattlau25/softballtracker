@@ -420,8 +420,8 @@ function getResult(g) {
 }
 function abOutcomeColor(ab) {
   if (COUNTS_AS_HIT.has(ab.outcome)) return '#276749';
-  if (['Walk','Hit by Pitch'].includes(ab.outcome)) return '#2b6cb0';
-  if (ab.outcome === 'Strikeout' || (ab.outcome === 'Foul Out' && ab.subOutcome === 'strikeout')) return '#c53030';
+  if (OUT_OUTCOMES.includes(ab.outcome)) return '#c53030';
+  if (OTHER_OUTCOMES.includes(ab.outcome)) return '#2e6db4';
   return '#a0aec0';
 }
 function calcGameStats(abs, includeKFoulInK) {
@@ -454,8 +454,15 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
 
   const toPx = p => {
     if (!p) return {x:0, y:0};
-    const w = p.w || 320, h = p.h || 281;
-    return { x: p.x * IMG_W / w, y: p.y * IMG_H / h };
+    const w = p.w || 320;
+    const h = p.h || 281;
+    // New data: saved in full image pixel space (w≈2839)
+    // Old data v2.13-v2.14: saved in 1000x1000 NORM space (w=1000)
+    // Legacy data: saved in old SVG space (w=320, h=281 or similar small values)
+    // All cases: x/w gives 0-1 fraction, then multiply by IMG dimensions
+    const fracX = p.x / w;
+    const fracY = p.y / h;
+    return { x: fracX * IMG_W, y: fracY * IMG_H };
   };
 
   const handleClick = e => {
@@ -1460,7 +1467,7 @@ function BatDropdown({ bats, value, onChange }) {
             </>
           ) : <span style={{color:'var(--muted)'}}>— Select bat —</span>}
         </div>
-        <span style={{color:'var(--muted)', marginLeft:8, fontSize:12}}>{open ? '▲' : '▼'}</span>
+        <i className={`fa-solid ${open ? 'fa-chevron-up' : 'fa-chevron-down'}`} style={{color:'var(--muted)', marginLeft:8, fontSize:11}}></i>
       </div>
       {open && (
         <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)',
@@ -1973,7 +1980,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div style={S.card}>
         <div style={{...S.pageHeader, marginBottom: abCollapsed ? 0 : 14}}>
           <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setAbCollapsed(c=>!c)}>
-            <span style={{color:'var(--muted)', fontSize:12}}>{abCollapsed ? '▶' : '▼'}</span>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
             <div style={S.sectionTitle}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
           </div>
           {!abCollapsed && !showForm && !editId && (
@@ -2066,7 +2073,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         <div style={{...S.card, marginTop:16}}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: sprayCollapsed ? 0 : 12}}>
             <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-              <span style={{color:'var(--muted)', fontSize:12}}>{sprayCollapsed ? '▶' : '▼'}</span>
+              <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
               <div style={S.sectionTitle}>Spray Chart</div>
             </div>
             {!sprayCollapsed && (
@@ -2117,7 +2124,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div style={{...S.card, marginTop:16}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: fieldingCollapsed ? 0 : (showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0))}}>
           <div style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer'}} onClick={()=>setFieldingCollapsed(c=>!c)}>
-            <span style={{color:'var(--muted)', fontSize:12}}>{fieldingCollapsed ? '▶' : '▼'}</span>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
             <div style={S.sectionTitle}>Fielding</div>
           </div>
           {!fieldingCollapsed && !showFieldingForm && (
