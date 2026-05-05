@@ -3271,17 +3271,21 @@ async function saveFilters(uid, key, value) {
 
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
 // ─── URL ROUTING HELPERS ───────────────────────────────────────────────────────
-// BASE is the repo subdirectory, e.g. "/softball-tracker" on GitHub Pages, "" on custom domain
+// BASE is the repo subdirectory, e.g. "/softball-tracker" on GitHub Pages, "" on custom domain/local
 const BASE = (function() {
-  // Walk up from current path to find the root — look for known page names to strip
-  const knownPages = ['game','games','stats','gamelog','trends','seasons','bats','profile','new-game'];
-  const parts = window.location.pathname.split('/').filter(Boolean);
-  // Find first part that's a known page and strip from there
-  const idx = parts.findIndex(p => knownPages.includes(p));
-  if (idx > 0) return '/' + parts.slice(0, idx).join('/');
-  if (idx === 0) return '';
-  // No known page found — assume all parts except last are base (for index.html)
-  return parts.length > 0 ? '/' + parts.slice(0, -1).join('/') : '';
+  if (window.location.protocol === 'file:' ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1') return '';
+  const path = window.location.pathname;
+  const knownPages = ['/game/','/games','/stats','/gamelog','/trends','/seasons','/bats','/profile','/new-game'];
+  const match = path.match(/^(\/[^\/]+)/);
+  if (match) {
+    const candidate = match[1];
+    if (!knownPages.some(p => path.startsWith(candidate + p) || path === candidate + '/' || path === candidate)) {
+      return candidate;
+    }
+  }
+  return '';
 })();
 
 function pageToPath(page, gameId = null) {
