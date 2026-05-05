@@ -662,7 +662,7 @@ const S = {
   resultBadge:  { borderRadius:8, padding:'4px 12px', fontSize:13, fontWeight:700, flexShrink:0 },
   metaRow:      { display:'flex', flexWrap:'wrap', gap:'4px 16px', fontSize:13 },
   metaItem:     { color:'var(--muted)' },
-  metaVal:      { color:'var(--label)', marginLeft:4 },
+  metaVal:      { color:'var(--label)' },
   divider:      { borderColor:'var(--border)', margin:'16px 0' },
   sectionTitle: { fontSize:16, fontWeight:600, color:'var(--text)', marginBottom:16, lineHeight:1.3 },
 };
@@ -721,7 +721,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
       <div className="nav-items">
         {NAV.map(n => (
           <a key={n.id} href={pageToPath(n.id)}
-            onClick={e => { e.preventDefault(); setPage(n.id); }}
+            onClick={e => { if(e.button===0&&!e.metaKey&&!e.ctrlKey){e.preventDefault(); setPage(n.id);} }}
             className={`nav-item${page.startsWith(n.id) ? ' nav-item-active' : ''}`}
             style={{textDecoration:'none'}}>
             <span style={{width:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
@@ -732,7 +732,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         ))}
         {/* Profile — desktop sidebar only */}
         <a href={pageToPath('profile')}
-          onClick={e => { e.preventDefault(); setPage('profile'); }}
+          onClick={e => { if(e.button===0&&!e.metaKey&&!e.ctrlKey){e.preventDefault(); setPage('profile');} }}
           className={`nav-item nav-profile-desktop${page === 'profile' ? ' nav-item-active' : ''}`}
           style={{textDecoration:'none'}}>
           <span style={{width:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
@@ -1295,7 +1295,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
             const s = calcGameStats(abs, false);
             return (
               <a key={g.id} href={pageToPath('game-detail', g.id)}
-                onClick={e => { e.preventDefault(); go(g.id); }}
+                onClick={e => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); go(g.id); } }}
                 style={{...S.listItem, cursor:'pointer', textDecoration:'none', display:'flex', alignItems:'center'}}>
                 <div style={{flex:1, minWidth:0}}>
                   <div style={{...S.listTitle, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
@@ -2876,7 +2876,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
                         onMouseEnter={e=>e.currentTarget.style.background='#f7fafc'}
                         onMouseLeave={e=>e.currentTarget.style.background=''}>
                         <td style={{...tdS,textAlign:'left',paddingLeft:14,whiteSpace:'nowrap'}}>
-                          <a href={pageToPath('game-detail', game.id)} onClick={e=>e.preventDefault()}
+                          <a href={pageToPath('game-detail', game.id)} onClick={e=>{ if(e.button===0&&!e.metaKey&&!e.ctrlKey){e.preventDefault(); go(game.id);} }}
                             style={{fontWeight:600,color:'#1a202c',textDecoration:'none',display:'block'}}>
                             {fmtDate(game.date)}
                           </a>
