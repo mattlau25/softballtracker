@@ -1906,9 +1906,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
           {/* Line 3: League · Tier [gap] Season */}
           {(game.league || game.season) && (
-            <div style={{...S.metaRow, marginLeft:0}}>
-              {game.league && <span style={S.metaItem}><span style={S.metaVal}>{game.league}{game.tier && ` · ${game.tier}`}</span></span>}
-              {game.season && <span style={S.metaItem}><span style={S.metaVal}>{game.season}</span></span>}
+            <div style={{display:'flex', flexWrap:'wrap', gap:'4px 16px', fontSize:13, marginTop:8}}>
+              {game.league && <span style={{color:'var(--label)'}}>{game.league}{game.tier && ` · ${game.tier}`}</span>}
+              {game.season && <span style={{color:'var(--label)'}}>{game.season}</span>}
             </div>
           )}
           {game.comments && <p style={{...S.muted, marginTop:12, fontStyle:'italic', borderTop:'1px solid var(--border)', paddingTop:10}}>{game.comments}</p>}
@@ -3268,18 +3268,23 @@ async function saveFilters(uid, key, value) {
 
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
 // ─── URL ROUTING HELPERS ───────────────────────────────────────────────────────
+// BASE is the repo subdirectory, e.g. "/softball-tracker" on GitHub Pages, "" on custom domain
 const BASE = (function() {
-  // Detect base path (e.g. /softball-tracker on GitHub Pages)
-  const scripts = document.getElementsByTagName('script');
-  const loc = window.location;
-  return loc.pathname.replace(/\/[^\/]*$/, '') || '';
+  // Walk up from current path to find the root — look for known page names to strip
+  const knownPages = ['game','games','stats','gamelog','trends','seasons','bats','profile','new-game'];
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  // Find first part that's a known page and strip from there
+  const idx = parts.findIndex(p => knownPages.includes(p));
+  if (idx > 0) return '/' + parts.slice(0, idx).join('/');
+  if (idx === 0) return '';
+  // No known page found — assume all parts except last are base (for index.html)
+  return parts.length > 0 ? '/' + parts.slice(0, -1).join('/') : '';
 })();
 
 function pageToPath(page, gameId = null) {
-  const base = BASE;
-  if (page === 'game-detail' && gameId) return `${base}/game/${gameId}`;
-  if (page === 'games' || !page) return `${base}/`;
-  return `${base}/${page}`;
+  if (page === 'game-detail' && gameId) return `${BASE}/game/${gameId}`;
+  if (page === 'games' || !page) return `${BASE}/`;
+  return `${BASE}/${page}`;
 }
 
 function getPageFromPath() {
@@ -3289,11 +3294,6 @@ function getPageFromPath() {
   const validPages = ['games','stats','gamelog','trends','seasons','bats','profile','new-game'];
   if (validPages.includes(path)) return { page: path, gameId: null };
   return { page: 'games', gameId: null };
-}
-
-// Keep hash-based as fallback for compatibility
-function pageToHash(page, gameId = null) {
-  return pageToPath(page, gameId);
 }
 
 function App() {
