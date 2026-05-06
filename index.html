@@ -502,7 +502,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     const cells = 10, cw = IMG_W/cells, ch = IMG_H/cells;
     const grid = Array.from({length:cells},()=>Array(cells).fill(0));
     visibleHits.forEach(h => {
-      const p = toPx(h);
+      const p = toPx(h.spray);
       const ci = Math.min(Math.floor(p.x/cw), cells-1);
       const ri = Math.min(Math.floor(p.y/ch), cells-1);
       if (ci>=0&&ri>=0) grid[ri][ci]++;
@@ -527,12 +527,12 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
       <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
       <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
         {visibleHits.map((h,i) => {
-          const p = toPx(h);
+          const p = toPx(h.spray);
           return <line key={`l${i}`} x1={HOME_PX} y1={HOME_PY} x2={p.x} y2={p.y}
             stroke={lineColor(h.outcome)} strokeWidth="8" opacity="0.6"/>;
         })}
         {visibleHits.map((h,i) => {
-          const p = toPx(h);
+          const p = toPx(h.spray);
           const abbr = ABBREVS[h.outcome] || '?';
           return (
             <g key={`d${i}`}>
