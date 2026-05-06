@@ -3523,7 +3523,7 @@ function App() {
       <div className="main-wrap">
         {page === 'games'       && <GamesPage uid={uid} setPage={navigate} setGameId={setGameId} active={page}/>}
         {page === 'new-game'    && <NewGamePage uid={uid} setPage={navigate} setGameId={setGameId}/>}
-        {page === 'game-detail' && <GameDetailPage uid={uid} gameId={gameId} setPage={navigate} prevPage={prevPage}/>}
+        {page === 'game-detail' && <GameDetailPage key={gameId} uid={uid} gameId={gameId} setPage={navigate} prevPage={prevPage}/>}
         {page === 'bats'        && <BatsPage uid={uid}/>}
         {page === 'profile'     && <ProfilePage uid={uid} darkMode={darkMode} toggleDark={toggleDark}/>}
         {page === 'stats'       && <StatsPage uid={uid}/>}
