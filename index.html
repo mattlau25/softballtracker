@@ -1672,6 +1672,17 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
         </div>
       )}
 
+      {/* Spray chart — after trajectory, before RBI */}
+      {showSpray && (
+        <div style={{...S.formGroup, marginBottom:16}}>
+          <label style={{...S.label, display:'block', marginBottom:8}}>Hit Location</label>
+          <div style={{width:'100%', background:'var(--spray-bg)', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', display:'flex', justifyContent:'center'}}>
+            <SprayChart onPlot={pt => upd('spray', pt)} plotted={f.spray} interactive={true} size={600}/>
+          </div>
+          {f.spray && <button onClick={() => upd('spray', null)} style={{...S.btnSmall, marginTop:6, fontSize:11}}>Clear placement</button>}
+        </div>
+      )}
+
       {/* RBI stepper */}
       {showRBI && (
         <div style={{...S.formGroup, marginBottom:16}}>
@@ -1696,18 +1707,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
         <textarea style={{...S.input, height:65, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Notes about this at bat..."/>
       </div>
 
-      {/* Spray chart — bottom */}
-      {showSpray && (
-        <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={{...S.label, display:'block', marginBottom:8}}>Hit Location</label>
-          <div style={{width:'100%', background:'var(--spray-bg)', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', display:'flex', justifyContent:'center'}}>
-            <SprayChart onPlot={pt => upd('spray', pt)} plotted={f.spray} interactive={true} size={600}/>
-          </div>
-          {f.spray && <button onClick={() => upd('spray', null)} style={{...S.btnSmall, marginTop:6, fontSize:11}}>Clear placement</button>}
-        </div>
-      )}
-
-      <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
+      <div style={{display:'flex', gap:10, justifyContent:'flex-end', paddingBottom:16}}>
         <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>
         <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)} style={S.btnPrimary}>
           {isEdit ? 'Save Changes' : 'Record AB'}
