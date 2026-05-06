@@ -449,8 +449,8 @@ function calcGameStats(abs, includeKFoulInK) {
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, showOuts = true }) {
   const IMG_W = 3040, IMG_H = 2584;
-  const HOME_PX = IMG_W * 0.49721;
-  const HOME_PY = IMG_H * 0.89894;
+  const HOME_PX = IMG_W * 0.49803;
+  const HOME_PY = IMG_H * 0.91370;
 
   const toPx = p => {
     if (!p) return {x:0, y:0};
@@ -2067,50 +2067,71 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         </div>
       )}
 
-      {/* At Bats */}
-      <div style={S.card}>
-        <div style={{...S.pageHeader, marginBottom: abCollapsed ? 0 : 14}}>
-          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setAbCollapsed(c=>!c)}>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1}}></i>
-            <div style={{...S.sectionTitle, marginBottom:0}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</div>
+      {/* ── At Bats ── */}
+      <div style={{marginTop:8}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}}
+          onClick={()=>{
+            if (abCollapsed && !showForm) { setAbCollapsed(false); }
+            else if (abCollapsed && showForm) { setAbCollapsed(false); }
+            else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
+            else { setAbCollapsed(true); }
+          }}>
+          <div style={{...S.sectionTitle, marginBottom:0}}>
+            At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}
           </div>
-          {!abCollapsed && !showForm && !editId && (
-            <div style={{display:'flex', gap:6}}>
-              {abs.length > 1 && <button onClick={()=>setReorderMode(r=>!r)} style={S.btnSecondary}>{reorderMode ? 'Done' : 'Reorder'}</button>}
-              <button onClick={()=>{setReorderMode(false);setShowForm(true);}} style={S.btnPrimary}>+ Record AB</button>
-            </div>
-          )}
+          <div style={{display:'flex', alignItems:'center', gap:8}}>
+            {!showForm && !editId && !abCollapsed && abs.length > 1 && (
+              <button onClick={e=>{e.stopPropagation();setReorderMode(r=>!r);}} style={S.btnSecondary}>{reorderMode ? 'Done' : 'Reorder'}</button>
+            )}
+            <button
+              style={(!abCollapsed && showForm) ? S.btnSecondary : S.btnPrimary}
+              onClick={e => {
+                e.stopPropagation();
+                if (abCollapsed) {
+                  setAbCollapsed(false);
+                  setReorderMode(false);
+                  setShowForm(true);
+                } else if (showForm) {
+                  setShowForm(false);
+                  setAbCollapsed(true);
+                } else {
+                  setReorderMode(false);
+                  setShowForm(true);
+                }
+              }}>
+              {(!abCollapsed && showForm) ? 'Cancel' : '+ Record AB'}
+            </button>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+          </div>
         </div>
 
-        {!abCollapsed && showForm && (
-          <div style={{borderTop:'1px solid var(--border)', marginTop:0, paddingTop:4}}>
-            <ABForm uid={uid} gameId={gameId} bats={bats}
-              defaultPosition={profile.primaryPosition||''}
-              onSave={() => { setShowForm(false); loadABs(); }}
-              onCancel={() => setShowForm(false)}/>
-          </div>
-        )}
-
-        {!abCollapsed && loading && <p style={S.muted}>Loading...</p>}
-        {!abCollapsed && !loading && abs.length === 0 && !showForm && (
-          <div style={{...S.empty, padding:'28px 0'}}>
-            <p>No at bats recorded yet.</p>
-          </div>
-        )}
-        {!abCollapsed && !loading && abs.length > 0 && (
-          <div style={{...S.list, marginTop: showForm || editId ? 16 : 0}}>
-            {abs.map((ab, i) => {
+        {!abCollapsed && (
+          <div style={{paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
+            {showForm && (
+              <div style={S.card}>
+                <ABForm uid={uid} gameId={gameId} bats={bats}
+                  defaultPosition={profile.primaryPosition||''}
+                  onSave={() => { setShowForm(false); loadABs(); }}
+                  onCancel={() => setShowForm(false)}/>
+              </div>
+            )}
+            {loading && <p style={S.muted}>Loading...</p>}
+            {!loading && abs.length === 0 && !showForm && (
+              <div style={{...S.empty, padding:'28px 0'}}><p>No at bats recorded yet.</p></div>
+            )}
+            {!loading && abs.length > 0 && abs.map((ab, i) => {
               const color = abOutcomeColor(ab);
               if (editId === ab.id) return (
-                <ABForm key={ab.id} uid={uid} gameId={gameId} bats={bats} ab={ab}
-                  onSave={() => { setEditId(null); loadABs(); }}
-                  onCancel={() => setEditId(null)}/>
+                <div key={ab.id} style={S.card}>
+                  <ABForm uid={uid} gameId={gameId} bats={bats} ab={ab}
+                    onSave={() => { setEditId(null); loadABs(); }}
+                    onCancel={() => setEditId(null)}/>
+                </div>
               );
               const label = ab.outcome + (ab.outcome === 'Foul Out' ? (ab.subOutcome === 'caught' ? ' (caught)' : ab.subOutcome === 'strikeout' ? ' (K)' : '') : '');
               const dir = ab.spray && COUNTS_AS_HIT.has(ab.outcome) ? getHitDirection(ab.spray, handedness) : null;
               const moveAB = async (fromIdx, toIdx) => {
                 if (toIdx < 0 || toIdx >= abs.length) return;
-                // Swap timestamps to reorder
                 const a = abs[fromIdx], b = abs[toIdx];
                 const tsA = a.timestamp, tsB = b.timestamp;
                 await Promise.all([
@@ -2140,7 +2161,6 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                       {ab.rbi > 0 && <span style={S.badge}>{ab.rbi} RBI</span>}
                       {ab.runScored && <span style={S.badge}>R</span>}
                       {dir && <span style={{...S.badge, color:'var(--primary)'}}>{dir}</span>}
-                      
                     </div>
                     <div style={S.listSub}>
                       {[ab.batName, ab.position, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
@@ -2156,138 +2176,162 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             })}
           </div>
         )}
-        {abCollapsed && abs.length > 0 && <div style={{color:'var(--muted)', fontSize:13}}>{abs.length} at bat{abs.length!==1?'s':''} recorded</div>}
+        {abCollapsed && abs.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{abs.length} at bat{abs.length!==1?'s':''} recorded</div>}
       </div>
 
-      {/* Spray Chart — between At Bats and Fielding */}
-      {sprayHits.length > 0 && (
-        <div style={{...S.card, marginTop:16}}>
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: sprayCollapsed ? 0 : 12}}>
-            <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-              <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1}}></i>
-              <div style={{...S.sectionTitle, marginBottom:0}}>Spray Chart</div>
-            </div>
+      {/* ── Spray Chart ── */}
+      <div style={{marginTop:8}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+          <div style={{...S.sectionTitle, marginBottom:0}}>
+            Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}
+          </div>
+          <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!sprayCollapsed && (
-              <div style={{display:'flex', gap:6, alignItems:'center'}}>
-                <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
-                  <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
-                  Show outs
-                </label>
-                {[['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val]) => (
-                  <button key={val} onClick={()=>setShowHeatmap(val)}
-                    style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
-                ))}
-              </div>
+              <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none'}} onClick={e=>e.stopPropagation()}>
+                <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
+                Show outs
+              </label>
+            )}
+            {!sprayCollapsed && [['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val]) => (
+              <button key={val} onClick={e=>{e.stopPropagation();setShowHeatmap(val);}}
+                style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
+            ))}
+            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+          </div>
+        </div>
+        {!sprayCollapsed && (
+          <div style={{...S.card, marginTop:10}}>
+            {sprayHits.length === 0 ? (
+              <div style={{...S.empty, padding:'20px 0'}}><p>No charted balls yet.</p></div>
+            ) : (
+              <>
+                <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
+                  <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
+                </div>
+                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</p>
+                {dirTotal > 0 && showHeatmap==='spray' && (
+                  <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
+                    <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
+                    {['Pull','Center','Oppo'].map(dir => {
+                      const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
+                      return (
+                        <div key={dir} style={{marginBottom:8}}>
+                          <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
+                            <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
+                            <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
+                          </div>
+                          <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
+                            <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
-          {!sprayCollapsed && (
-            <>
-              <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
-                <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
-              </div>
-              <p style={{...S.hint, marginTop:8, textAlign:'center'}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</p>
-              {dirTotal > 0 && showHeatmap==='spray' && (
-                <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
-                  <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
-                  {['Pull','Center','Oppo'].map(dir => {
-                    const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
-                    return (
-                      <div key={dir} style={{marginBottom:8}}>
-                        <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
-                          <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
-                          <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
-                        </div>
-                        <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
-                          <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-          {sprayCollapsed && <div style={{color:'var(--muted)', fontSize:13}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</div>}
-        </div>
-      )}
+        )}
+        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</div>}
+      </div>
 
-      {/* ── Fielding Card — always visible ── */}
-      <div style={{...S.card, marginTop:16}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: fieldingCollapsed ? 0 : (showFieldingForm ? 14 : (fieldingEntries.length > 0 ? 12 : 0))}}>
-          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>setFieldingCollapsed(c=>!c)}>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1}}></i>
-            <div style={{...S.sectionTitle, marginBottom:0}}>Fielding</div>
+      {/* ── Fielding ── */}
+      <div style={{marginTop:8}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}}
+          onClick={()=>{
+            if (fieldingCollapsed && !showFieldingForm) { setFieldingCollapsed(false); }
+            else if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
+            else { setFieldingCollapsed(c=>!c); }
+          }}>
+          <div style={{...S.sectionTitle, marginBottom:0}}>
+            Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}
           </div>
-          {!fieldingCollapsed && !showFieldingForm && (
-            <button onClick={()=>{setShowFieldingForm(true);setEditFieldingId(null);setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''}); }} style={S.btnPrimary}>+ Record Fielding</button>
-          )}
+          <div style={{display:'flex', alignItems:'center', gap:8}}>
+            <button
+              style={(!fieldingCollapsed && showFieldingForm) ? S.btnSecondary : S.btnPrimary}
+              onClick={e => {
+                e.stopPropagation();
+                if (fieldingCollapsed) {
+                  setFieldingCollapsed(false);
+                  setShowFieldingForm(true);
+                  setEditFieldingId(null);
+                  setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''});
+                } else if (showFieldingForm) {
+                  setShowFieldingForm(false);
+                  setEditFieldingId(null);
+                  setFieldingCollapsed(true);
+                } else {
+                  setShowFieldingForm(true);
+                  setEditFieldingId(null);
+                  setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''});
+                }
+              }}>
+              {(!fieldingCollapsed && showFieldingForm) ? 'Cancel' : '+ Record Fielding'}
+            </button>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+          </div>
         </div>
 
-        {/* Form */}
-        {!fieldingCollapsed && showFieldingForm && (
-          <>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14}}>
-              <div style={S.formGroup}>
-                <label style={S.label}>Inning</label>
-                <select style={S.select} value={fieldingForm.inning} onChange={e=>setFieldingForm(f=>({...f,inning:e.target.value}))}>
-                  <option value="">—</option>
-                  {['1','2','3','4','5','6','7','8','9','10','11','12','Extra'].map(n=>(
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={S.formGroup}>
-                <label style={S.label}>Position *</label>
-                <select style={S.select} value={fieldingForm.position} onChange={e=>setFieldingForm(f=>({...f,position:e.target.value}))}>
-                  <option value="">— Select —</option>
-                  {['P','C','1B','2B','3B','SS','LF','LCF','CF','RCF','RF','DH','EH','UTIL'].map(p=>(
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:14}}>
-              {[['putouts','Putouts'],['assists','Assists'],['errors','Errors']].map(([key,lbl])=>(
-                <div key={key}>
-                  <label style={{...S.label, display:'block', marginBottom:6}}>{lbl}</label>
-                  <div style={{display:'flex', alignItems:'center', gap:8}}>
-                    <button onClick={()=>setFieldingForm(f=>({...f,[key]:Math.max(0,f[key]-1)}))}
-                      style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      <i className="fa-solid fa-minus" style={{fontSize:10,color:'var(--text)'}}></i>
-                    </button>
-                    <span style={{fontSize:18,fontWeight:700,minWidth:20,textAlign:'center',color:'var(--text)'}}>{fieldingForm[key]}</span>
-                    <button onClick={()=>setFieldingForm(f=>({...f,[key]:f[key]+1}))}
-                      style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      <i className="fa-solid fa-plus" style={{fontSize:10,color:'var(--text)'}}></i>
-                    </button>
+        {!fieldingCollapsed && (
+          <div style={{paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
+            {showFieldingForm && (
+              <div style={S.card}>
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14}}>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Inning</label>
+                    <select style={S.select} value={fieldingForm.inning} onChange={e=>setFieldingForm(f=>({...f,inning:e.target.value}))}>
+                      <option value="">—</option>
+                      {['1','2','3','4','5','6','7','8','9','10','11','12','Extra'].map(n=>(
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={S.formGroup}>
+                    <label style={S.label}>Position *</label>
+                    <select style={S.select} value={fieldingForm.position} onChange={e=>setFieldingForm(f=>({...f,position:e.target.value}))}>
+                      <option value="">— Select —</option>
+                      {['P','C','1B','2B','3B','SS','LF','LCF','CF','RCF','RF','DH','EH','UTIL'].map(p=>(
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div style={{...S.formGroup, marginBottom:14}}>
-              <label style={S.label}>Notes</label>
-              <textarea style={{...S.input, height:55, resize:'vertical'}} value={fieldingForm.notes}
-                onChange={e=>setFieldingForm(f=>({...f,notes:e.target.value}))}
-                placeholder="e.g. Made a diving stop at 3B..."/>
-            </div>
-            <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
-              <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null);}} style={S.btnSecondary}>Cancel</button>
-              <button onClick={saveFielding} disabled={!fieldingForm.position} style={S.btnPrimary}>
-                {editFieldingId ? 'Save Changes' : 'Save Fielding'}
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Entries list */}
-        {!fieldingCollapsed && !showFieldingForm && fieldingEntries.length === 0 && (
-          <div style={{...S.empty, padding:'20px 0'}}>
-            <p>No fielding recorded yet.</p>
-          </div>
-        )}
-        {!fieldingCollapsed && !showFieldingForm && fieldingEntries.length > 0 && (
-          <div style={S.list}>
-            {fieldingEntries.map(entry => (
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:14}}>
+                  {[['putouts','Putouts'],['assists','Assists'],['errors','Errors']].map(([key,lbl])=>(
+                    <div key={key}>
+                      <label style={{...S.label, display:'block', marginBottom:6}}>{lbl}</label>
+                      <div style={{display:'flex', alignItems:'center', gap:8}}>
+                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:Math.max(0,f[key]-1)}))}
+                          style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          <i className="fa-solid fa-minus" style={{fontSize:10,color:'var(--text)'}}></i>
+                        </button>
+                        <span style={{fontSize:18,fontWeight:700,minWidth:20,textAlign:'center',color:'var(--text)'}}>{fieldingForm[key]}</span>
+                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:f[key]+1}))}
+                          style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          <i className="fa-solid fa-plus" style={{fontSize:10,color:'var(--text)'}}></i>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{...S.formGroup, marginBottom:14}}>
+                  <label style={S.label}>Notes</label>
+                  <textarea style={{...S.input, height:55, resize:'vertical'}} value={fieldingForm.notes}
+                    onChange={e=>setFieldingForm(f=>({...f,notes:e.target.value}))}
+                    placeholder="e.g. Made a diving stop at 3B..."/>
+                </div>
+                <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
+                  <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null);}} style={S.btnSecondary}>Cancel</button>
+                  <button onClick={saveFielding} disabled={!fieldingForm.position} style={S.btnPrimary}>
+                    {editFieldingId ? 'Save Changes' : 'Save Fielding'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {fieldingEntries.length === 0 && !showFieldingForm && (
+              <div style={{...S.empty, padding:'20px 0'}}><p>No fielding recorded yet.</p></div>
+            )}
+            {fieldingEntries.length > 0 && fieldingEntries.map(entry => (
               <div key={entry.id} style={{...S.listItem, flexDirection:'column', alignItems:'flex-start', gap:6}}>
                 <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%'}}>
                   <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
@@ -2309,7 +2353,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             ))}
           </div>
         )}
-        {fieldingCollapsed && fieldingEntries.length > 0 && <div style={{color:'var(--muted)', fontSize:13}}>{fieldingEntries.length} inning{fieldingEntries.length!==1?'s':''} recorded</div>}
+        {fieldingCollapsed && fieldingEntries.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{fieldingEntries.length} inning{fieldingEntries.length!==1?'s':''} recorded</div>}
       </div>
     </div>
   );
