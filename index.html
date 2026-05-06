@@ -449,8 +449,8 @@ function calcGameStats(abs, includeKFoulInK) {
 // ─── SPRAY CHART ───────────────────────────────────────────────────────────────
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, showOuts = true }) {
   const IMG_W = 3040, IMG_H = 2584;
-  const HOME_PX = IMG_W * 0.49737;
-  const HOME_PY = IMG_H * 0.88429;
+  const HOME_PX = IMG_W * 0.49721;
+  const HOME_PY = IMG_H * 0.89894;
 
   const toPx = p => {
     if (!p) return {x:0, y:0};
@@ -479,7 +479,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     if (outcome === 'Triple')   return '#8dd4a8';  // lightest green
     if (outcome === 'Home Run') return '#d4782a';  // pastel orange for HR
     if (COUNTS_AS_HIT.has(outcome)) return '#1a7a4a';
-    if (OUT_OUTCOMES.includes(outcome)) return '#c44055'; // lighter red for outs
+    if (OUT_OUTCOMES.includes(outcome)) return '#d14f62'; // lighter red for outs
     return '#5b8fc9';  // lighter slate-blue for "other"
   };
   const dotTextColor = () => 'white';
@@ -516,20 +516,104 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
   }
 
   const imgRef = React.useRef(null);
+  const isDragging = React.useRef(false);
+  const dragMoved = React.useRef(false);
 
-  const handleImageClick = e => {
+  const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+  const clientToField = (clientX, clientY) => {
+    const img = imgRef.current;
+    if (!img) return null;
+    const rect = img.getBoundingClientRect();
+    const x = clamp(Math.round(((clientX - rect.left) / rect.width) * IMG_W), DOT_R, IMG_W - DOT_R);
+    const y = clamp(Math.round(((clientY - rect.top) / rect.height) * IMG_H), DOT_R, IMG_H - DOT_R);
+    return { x, y, w: IMG_W, h: IMG_H };
+  };
+
+  const handleMouseDown = e => {
     if (!interactive) return;
+    if (!plotted) return;
+    const p = toPx(plotted);
     const img = imgRef.current;
     if (!img) return;
     const rect = img.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * IMG_W);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * IMG_H);
-    if (x < 0 || y < 0 || x > IMG_W || y > IMG_H) return;
-    onPlot && onPlot({ x, y, w: IMG_W, h: IMG_H });
+    const mx = ((e.clientX - rect.left) / rect.width) * IMG_W;
+    const my = ((e.clientY - rect.top) / rect.height) * IMG_H;
+    const dist = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
+    if (dist <= DOT_R * 2) {
+      isDragging.current = true;
+      dragMoved.current = false;
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = e => {
+    if (!isDragging.current || !interactive) return;
+    dragMoved.current = true;
+    const pt = clientToField(e.clientX, e.clientY);
+    if (pt) onPlot && onPlot(pt);
+  };
+
+  const handleMouseUp = e => {
+    if (isDragging.current) {
+      isDragging.current = false;
+      return;
+    }
+  };
+
+  const handleTouchStart = e => {
+    if (!interactive) return;
+    if (!plotted) return;
+    const touch = e.touches[0];
+    const p = toPx(plotted);
+    const img = imgRef.current;
+    if (!img) return;
+    const rect = img.getBoundingClientRect();
+    const mx = ((touch.clientX - rect.left) / rect.width) * IMG_W;
+    const my = ((touch.clientY - rect.top) / rect.height) * IMG_H;
+    const dist = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
+    if (dist <= DOT_R * 2) {
+      isDragging.current = true;
+      dragMoved.current = false;
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchMove = e => {
+    if (!isDragging.current || !interactive) return;
+    dragMoved.current = true;
+    const touch = e.touches[0];
+    const pt = clientToField(touch.clientX, touch.clientY);
+    if (pt) onPlot && onPlot(pt);
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = e => {
+    if (isDragging.current) {
+      isDragging.current = false;
+      return;
+    }
+  };
+
+  const handleClick = e => {
+    if (!interactive) return;
+    if (dragMoved.current) { dragMoved.current = false; return; }
+    const pt = clientToField(e.clientX, e.clientY);
+    if (pt) onPlot && onPlot(pt);
   };
 
   return (
-    <div style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none'}} onClick={handleImageClick}>
+    <div
+      style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none'}}
+      onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div style={{position:'relative'}}>
         <img ref={imgRef} src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
         <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
@@ -552,9 +636,9 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
         {plotted && (() => {
           const p = toPx(plotted);
           return (
-            <g>
-              <circle cx={p.x} cy={p.y} r={80} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="10"/>
-              <circle cx={p.x} cy={p.y} r={40} fill="#1e3a5f"/>
+            <g style={{cursor:'grab'}}>
+              <circle cx={p.x} cy={p.y} r={DOT_R} fill="#1e3a5f" fillOpacity="0.18" stroke="#1e3a5f" strokeWidth="10"/>
+              <circle cx={p.x} cy={p.y} r={30} fill="#1e3a5f"/>
             </g>
           );
         })()}
@@ -1255,15 +1339,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
           {search && <button onClick={()=>setSearch('')} style={{position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:14}}>✕</button>}
         </div>
 
-      {!loading && !search && games.length > 0 && (streak || (careerHighs?.bestH > 0)) && (
-        <div style={{...S.card, background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)', marginBottom:16}}>
-          <div style={{display:'flex', flexWrap:'wrap', gap:20}}>
-            {streak && <div><div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Hit Streak</div><div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{streak} <span style={{fontSize:13, fontWeight:400}}>games</span></div></div>}
-            {careerHighs?.bestH > 0 && <div><div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Best H (game)</div><div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{careerHighs.bestH}</div></div>}
-            {careerHighs?.bestRBI > 0 && <div><div style={{fontSize:11, color:'#6366f1', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:2}}>Best RBI (game)</div><div style={{fontSize:22, fontWeight:700, color:'#4338ca'}}>{careerHighs.bestRBI}</div></div>}
-          </div>
-        </div>
-      )}
+
 
       {loading ? <p style={S.muted}>Loading...</p> : filteredGames.length === 0 ? (
         <div style={S.empty}>
@@ -1527,7 +1603,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const isFoulOut = f.outcome === 'Foul Out';
   const isFoulCaught = isFoulOut && f.subOutcome === 'caught';
   const isFoulK = isFoulOut && f.subOutcome === 'strikeout';
-  const showSpray = SPRAY_OUTCOMES.has(f.outcome) || isFoulCaught;
+  const showSpray = SPRAY_OUTCOMES.has(f.outcome) || isFoulCaught || isFoulK;
   const showBases = ['Reach on Error', "Fielder's Choice"].includes(f.outcome);
   const autoBase = HIT_BASES[f.outcome] || null;
   const showRBI = f.outcome && !['Strikeout'].includes(f.outcome) && !isFoulK && !(isFoulOut && !f.subOutcome);
