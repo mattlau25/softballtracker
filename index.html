@@ -450,7 +450,7 @@ function calcGameStats(abs, includeKFoulInK) {
 function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320, showHeatmap = false, showZones = false, showOuts = true }) {
   const IMG_W = 3040, IMG_H = 2584;
   const HOME_PX = IMG_W * 0.49803;
-  const HOME_PY = IMG_H * 0.91370;
+  const HOME_PY = IMG_H * 0.87693;
 
   const toPx = p => {
     if (!p) return {x:0, y:0};
@@ -699,7 +699,7 @@ const S = {
 
   // ── Lists ──
   list:      { display:'flex', flexDirection:'column', gap:8 },
-  listItem:  { display:'flex', alignItems:'center', gap:12, padding:'12px 16px', background:'var(--surface)', borderRadius:10, border:'1px solid var(--border)' },
+  listItem:  { display:'flex', alignItems:'center', gap:12, padding:'12px 16px', background:'var(--surface)', borderRadius:12, border:'1px solid var(--border)', boxShadow:'var(--card-shadow)' },
   listTitle: { fontSize:14, fontWeight:600, color:'var(--text)', marginBottom:2, lineHeight:1.4 },
   listSub:   { fontSize:12, color:'var(--muted)', lineHeight:1.4 },
 
@@ -1819,6 +1819,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [confirmGame, setConfirmGame] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [fieldingReorderMode, setFieldingReorderMode] = useState(false);
+  const [fieldingDragIdx, setFieldingDragIdx] = useState(null);
+  const [fieldingDragOverIdx, setFieldingDragOverIdx] = useState(null);
   const [abCollapsed, setAbCollapsed] = useState(false);
   const [sprayCollapsed, setSprayCollapsed] = useState(false);
   const [fieldingCollapsed, setFieldingCollapsed] = useState(false);
@@ -2069,14 +2073,12 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── At Bats ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}}
-          onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
+          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
             if (abCollapsed && !showForm) { setAbCollapsed(false); }
-            else if (abCollapsed && showForm) { setAbCollapsed(false); }
             else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
-            else { setAbCollapsed(true); }
+            else { setAbCollapsed(c=>!c); }
           }}>
-          <div style={{...S.sectionTitle, marginBottom:0}}>
             At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
@@ -2101,7 +2103,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               }}>
               {(!abCollapsed && showForm) ? 'Cancel' : '+ Record AB'}
             </button>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
+              if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
+              else { setAbCollapsed(c=>!c); }
+            }}></i>
           </div>
         </div>
 
@@ -2140,17 +2145,27 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 ]);
                 loadABs();
               };
+              const isDraggingThis = reorderMode && dragIdx === i;
+              const isDragOver = reorderMode && dragOverIdx === i && dragIdx !== i;
               return (
-                <div key={ab.id} style={S.listItem}>
+                <div key={ab.id}
+                  draggable={reorderMode}
+                  onDragStart={e => { if (!reorderMode) return; setDragIdx(i); e.dataTransfer.effectAllowed='move'; }}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                  onDragOver={e => { if (!reorderMode) return; e.preventDefault(); setDragOverIdx(i); }}
+                  onDragLeave={() => setDragOverIdx(null)}
+                  onDrop={() => { if (dragIdx !== null && dragIdx !== i) { moveAB(dragIdx, i); } setDragIdx(null); setDragOverIdx(null); }}
+                  style={{...S.listItem,
+                    opacity: isDraggingThis ? 0.4 : 1,
+                    transform: isDragOver ? 'scale(1.01)' : 'scale(1)',
+                    outline: isDragOver ? '2px solid var(--primary)' : 'none',
+                    transition: 'transform 0.1s, opacity 0.1s, outline 0.1s',
+                    cursor: reorderMode ? 'grab' : 'default',
+                  }}>
                   <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0, marginRight:4}}>
                     {reorderMode && (
-                      <div draggable onDragStart={()=>setDragIdx(i)}
-                        onDragOver={e=>{e.preventDefault();}}
-                        onDrop={()=>{if(dragIdx!==null&&dragIdx!==i){moveAB(dragIdx,i);setDragIdx(null);}}}
-                        style={{cursor:'grab', color:'var(--muted)', display:'flex', flexDirection:'column', gap:2, padding:'2px 4px'}}>
-                        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 3px'}}>
-                          {[0,1,2,3,4,5].map(d=><div key={d} style={{width:4,height:4,borderRadius:'50%',background:'var(--muted)',opacity:0.6}}/>)}
-                        </div>
+                      <div style={{color:'var(--muted)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 3px', padding:'2px 4px'}}>
+                        {[0,1,2,3,4,5].map(d=><div key={d} style={{width:4,height:4,borderRadius:'50%',background:'var(--muted)',opacity:0.6}}/>)}
                       </div>
                     )}
                     <div style={{color:'var(--muted)', fontSize:12, fontWeight:500, minWidth:24, textAlign:'center'}}>#{i+1}</div>
@@ -2168,8 +2183,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     {ab.comments && <div style={{...S.hint, marginTop:3, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
                   <div style={{display:'flex', gap:6, flexShrink:0}}>
-                    <button onClick={() => setEditId(ab.id)} style={S.btnSmall}>Edit</button>
-                    <button onClick={() => setConfirmAB(ab.id)} style={S.btnDanger}>Del</button>
+                    {!reorderMode && <button onClick={() => setEditId(ab.id)} style={S.btnSmall}>Edit</button>}
+                    {!reorderMode && <button onClick={() => setConfirmAB(ab.id)} style={S.btnDanger}>Del</button>}
                   </div>
                 </div>
               );
@@ -2185,30 +2200,30 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           <div style={{...S.sectionTitle, marginBottom:0}}>
             Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}
           </div>
-          <div style={{display:'flex', alignItems:'center', gap:8}}>
-            {!sprayCollapsed && (
-              <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none'}} onClick={e=>e.stopPropagation()}>
-                <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
-                Show outs
-              </label>
-            )}
-            {!sprayCollapsed && [['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val]) => (
-              <button key={val} onClick={e=>{e.stopPropagation();setShowHeatmap(val);}}
-                style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
-            ))}
-            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
-          </div>
+          <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
         </div>
         {!sprayCollapsed && (
-          <div style={{...S.card, marginTop:10}}>
+          <div style={{display:'flex', alignItems:'center', gap:8, paddingTop:10, flexWrap:'wrap'}}>
+            {[['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val]) => (
+              <button key={val} onClick={()=>setShowHeatmap(val)}
+                style={{...S.btnSmall,...(showHeatmap===val?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{lbl}</button>
+            ))}
+            <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none', marginLeft:'auto'}}>
+              <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
+              Show outs
+            </label>
+          </div>
+        )}
+        {!sprayCollapsed && (
+          <div style={{...S.card, marginTop:8}}>
             {sprayHits.length === 0 ? (
-              <div style={{...S.empty, padding:'20px 0'}}><p>No charted balls yet.</p></div>
+              <div style={{...S.empty, padding:'20px 0'}}><p>No mapped balls yet.</p></div>
             ) : (
               <>
                 <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
                   <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
                 </div>
-                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</p>
+                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}</p>
                 {dirTotal > 0 && showHeatmap==='spray' && (
                   <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
                     <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
@@ -2232,21 +2247,22 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             )}
           </div>
         )}
-        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} charted {sprayHits.length===1?'ball':'balls'}</div>}
+        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'} mapped</div>}
       </div>
 
       {/* ── Fielding ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}}
-          onClick={()=>{
-            if (fieldingCollapsed && !showFieldingForm) { setFieldingCollapsed(false); }
-            else if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
+          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
+            if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
             else { setFieldingCollapsed(c=>!c); }
           }}>
-          <div style={{...S.sectionTitle, marginBottom:0}}>
             Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
+            {!showFieldingForm && !fieldingCollapsed && fieldingEntries.length > 1 && (
+              <button onClick={e=>{e.stopPropagation();setFieldingReorderMode(r=>!r);}} style={S.btnSecondary}>{fieldingReorderMode ? 'Done' : 'Reorder'}</button>
+            )}
             <button
               style={(!fieldingCollapsed && showFieldingForm) ? S.btnSecondary : S.btnPrimary}
               onClick={e => {
@@ -2268,7 +2284,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               }}>
               {(!fieldingCollapsed && showFieldingForm) ? 'Cancel' : '+ Record Fielding'}
             </button>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
+              if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
+              else { setFieldingCollapsed(c=>!c); }
+            }}></i>
           </div>
         </div>
 
@@ -2331,26 +2350,58 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             {fieldingEntries.length === 0 && !showFieldingForm && (
               <div style={{...S.empty, padding:'20px 0'}}><p>No fielding recorded yet.</p></div>
             )}
-            {fieldingEntries.length > 0 && fieldingEntries.map(entry => (
-              <div key={entry.id} style={{...S.listItem, flexDirection:'column', alignItems:'flex-start', gap:6}}>
-                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
-                    {entry.inning && <span style={{background:'var(--surface2)', color:'var(--muted)', fontWeight:600, fontSize:12, padding:'2px 8px', borderRadius:4}}>Inn. {entry.inning}</span>}
-                    <span style={{background:'#e2e8f0', color:'#2d3748', fontWeight:700, fontSize:13, padding:'3px 10px', borderRadius:6}}>{entry.position}</span>
-                    <div style={{display:'flex', gap:12, fontSize:13, color:'var(--text)'}}>
-                      <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>PO </span><strong>{entry.putouts||0}</strong></span>
-                      <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>A </span><strong>{entry.assists||0}</strong></span>
-                      <span><span style={{color:entry.errors>0?'#c53030':'var(--muted)', fontSize:11, fontWeight:600}}>E </span><strong style={{color:entry.errors>0?'#c53030':'var(--text)'}}>{entry.errors||0}</strong></span>
+            {fieldingEntries.length > 0 && fieldingEntries.map((entry, fi) => {
+              const isDraggingThis = fieldingReorderMode && fieldingDragIdx === fi;
+              const isDragOver = fieldingReorderMode && fieldingDragOverIdx === fi && fieldingDragIdx !== fi;
+              const moveFielding = async (fromIdx, toIdx) => {
+                if (toIdx < 0 || toIdx >= fieldingEntries.length) return;
+                const a = fieldingEntries[fromIdx], b = fieldingEntries[toIdx];
+                const tsA = a.createdAt, tsB = b.createdAt;
+                await Promise.all([
+                  fieldingCol().doc(a.id).update({createdAt: tsB}),
+                  fieldingCol().doc(b.id).update({createdAt: tsA}),
+                ]);
+                loadFielding();
+              };
+              return (
+                <div key={entry.id}
+                  draggable={fieldingReorderMode}
+                  onDragStart={e => { if (!fieldingReorderMode) return; setFieldingDragIdx(fi); e.dataTransfer.effectAllowed='move'; }}
+                  onDragEnd={() => { setFieldingDragIdx(null); setFieldingDragOverIdx(null); }}
+                  onDragOver={e => { if (!fieldingReorderMode) return; e.preventDefault(); setFieldingDragOverIdx(fi); }}
+                  onDragLeave={() => setFieldingDragOverIdx(null)}
+                  onDrop={() => { if (fieldingDragIdx !== null && fieldingDragIdx !== fi) { moveFielding(fieldingDragIdx, fi); } setFieldingDragIdx(null); setFieldingDragOverIdx(null); }}
+                  style={{...S.listItem, flexDirection:'column', alignItems:'flex-start', gap:6,
+                    opacity: isDraggingThis ? 0.4 : 1,
+                    transform: isDragOver ? 'scale(1.01)' : 'scale(1)',
+                    outline: isDragOver ? '2px solid var(--primary)' : 'none',
+                    transition: 'transform 0.1s, opacity 0.1s, outline 0.1s',
+                    cursor: fieldingReorderMode ? 'grab' : 'default',
+                  }}>
+                  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
+                      {fieldingReorderMode && (
+                        <div style={{color:'var(--muted)', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2px 3px', padding:'2px 4px', marginRight:2}}>
+                          {[0,1,2,3,4,5].map(d=><div key={d} style={{width:4,height:4,borderRadius:'50%',background:'var(--muted)',opacity:0.6}}/>)}
+                        </div>
+                      )}
+                      {entry.inning && <span style={{background:'var(--surface2)', color:'var(--muted)', fontWeight:600, fontSize:12, padding:'2px 8px', borderRadius:4}}>Inn. {entry.inning}</span>}
+                      <span style={{background:'#e2e8f0', color:'#2d3748', fontWeight:700, fontSize:13, padding:'3px 10px', borderRadius:6}}>{entry.position}</span>
+                      <div style={{display:'flex', gap:12, fontSize:13, color:'var(--text)'}}>
+                        <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>PO </span><strong>{entry.putouts||0}</strong></span>
+                        <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>A </span><strong>{entry.assists||0}</strong></span>
+                        <span><span style={{color:entry.errors>0?'#c53030':'var(--muted)', fontSize:11, fontWeight:600}}>E </span><strong style={{color:entry.errors>0?'#c53030':'var(--text)'}}>{entry.errors||0}</strong></span>
+                      </div>
+                    </div>
+                    <div style={{display:'flex', gap:6}}>
+                      {!fieldingReorderMode && <button onClick={()=>startEditFielding(entry)} style={S.btnSmall}>Edit</button>}
+                      {!fieldingReorderMode && <button onClick={()=>deleteFielding(entry.id)} style={S.btnDanger}>Delete</button>}
                     </div>
                   </div>
-                  <div style={{display:'flex', gap:6}}>
-                    <button onClick={()=>startEditFielding(entry)} style={S.btnSmall}>Edit</button>
-                    <button onClick={()=>deleteFielding(entry.id)} style={S.btnDanger}>Delete</button>
-                  </div>
+                  {entry.notes && <p style={{...S.muted, fontSize:12, fontStyle:'italic', margin:0}}>{entry.notes}</p>}
                 </div>
-                {entry.notes && <p style={{...S.muted, fontSize:12, fontStyle:'italic', margin:0}}>{entry.notes}</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {fieldingCollapsed && fieldingEntries.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{fieldingEntries.length} inning{fieldingEntries.length!==1?'s':''} recorded</div>}
