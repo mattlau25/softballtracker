@@ -2074,12 +2074,13 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── At Bats ── */}
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
+          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>{
             if (abCollapsed && !showForm) { setAbCollapsed(false); }
-            else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
-            else { setAbCollapsed(c=>!c); }
+            else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); setReorderMode(false); }
+            else { setAbCollapsed(c=>!c); setReorderMode(false); }
           }}>
-            At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}
+            <span style={{...S.sectionTitle, marginBottom:0}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showForm && !editId && !abCollapsed && abs.length > 1 && (
@@ -2103,10 +2104,6 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               }}>
               {(!abCollapsed && showForm) ? 'Cancel' : '+ Record AB'}
             </button>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
-              if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
-              else { setAbCollapsed(c=>!c); }
-            }}></i>
           </div>
         </div>
 
@@ -2171,17 +2168,56 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     <div style={{color:'var(--muted)', fontSize:12, fontWeight:500, minWidth:24, textAlign:'center'}}>#{i+1}</div>
                   </div>
                   <div style={{flex:1, minWidth:0}}>
-                    <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
+                    {/* Row 1: abbrev pill + outcome name + tags */}
+                    <div style={{display:'flex', alignItems:'center', gap:5, flexWrap:'wrap'}}>
+                      {/* Coloured abbreviation pill */}
+                      {(() => {
+                        const CARD_ABBREVS = {'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR','Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO','Pop Out':'PO','Foul Out':'FOK','Double Play':'DP','Walk':'BB','Hit by Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH','Reach on Error':'E',"Fielder's Choice":'FC'};
+                        const abbr = CARD_ABBREVS[ab.outcome];
+                        const isHit = COUNTS_AS_HIT.has(ab.outcome);
+                        const isOut = OUT_OUTCOMES.includes(ab.outcome);
+                        const pillBg = isHit ? '#1a7a5a' : isOut ? '#c0392b' : '#2e6db4';
+                        if (!abbr) return null;
+                        return <span style={{background:pillBg, color:'#fff', borderRadius:6, padding:'2px 7px', fontSize:12, fontWeight:700, letterSpacing:'0.02em', flexShrink:0}}>{abbr}</span>;
+                      })()}
                       <span style={{fontWeight:600, color, fontSize:13}}>{label}</span>
-                      {ab.rbi > 0 && <span style={S.badge}>{ab.rbi} RBI</span>}
-                      {ab.runScored && <span style={S.badge}>R</span>}
-                      {dir && <span style={{...S.badge, color:'var(--primary)'}}>{dir}</span>}
+                      {ab.rbi > 0 && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{ab.rbi} RBI</span>}
+                      {ab.runScored && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>R</span>}
+                      {ab.trajectory && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{ab.trajectory === 'Ground Ball' ? 'GB' : ab.trajectory === 'Line Drive' ? 'LD' : ab.trajectory === 'Fly Ball' ? 'FB' : ab.trajectory === 'Pop Up' ? 'PU' : ab.trajectory === 'Bunt' ? 'BT' : ab.trajectory}</span>}
+                      {dir && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{dir}</span>}
                     </div>
                     <div style={S.listSub}>
                       {[ab.batName, ab.position, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
                     </div>
                     {ab.comments && <div style={{...S.hint, marginTop:3, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
+                  {/* Mini spray diagram */}
+                  {!reorderMode && ab.spray && (() => {
+                    const W = ab.spray.w || 320, H = ab.spray.h || 281;
+                    const nx = ab.spray.x / W; // 0=left, 1=right
+                    const ny = ab.spray.y / H; // 0=top(deep), 1=bottom(home)
+                    // Map to mini SVG (44x44 viewBox, home plate at bottom center)
+                    const svgSize = 44;
+                    const dotX = nx * svgSize;
+                    const dotY = ny * svgSize;
+                    const isHit = COUNTS_AS_HIT.has(ab.outcome);
+                    const dotColor = isHit ? '#276749' : '#c53030';
+                    return (
+                      <svg width="44" height="44" viewBox="0 0 44 44" style={{flexShrink:0, marginLeft:6, marginRight:8, opacity:0.85}}>
+                        {/* Field outline: a wedge/sector from home plate */}
+                        <path d="M22,40 L4,6 Q22,0 40,6 Z" fill="var(--spray-bg, #f0f4f0)" stroke="var(--border)" strokeWidth="1"/>
+                        {/* Foul lines */}
+                        <line x1="22" y1="40" x2="4" y2="6" stroke="var(--border)" strokeWidth="0.8" strokeDasharray="2,2"/>
+                        <line x1="22" y1="40" x2="40" y2="6" stroke="var(--border)" strokeWidth="0.8" strokeDasharray="2,2"/>
+                        {/* Line from home to hit */}
+                        <line x1="22" y1="40" x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="0.8" strokeOpacity="0.5"/>
+                        {/* Hit dot */}
+                        <circle cx={dotX} cy={dotY} r="3" fill={dotColor} fillOpacity="0.85"/>
+                        {/* Home plate dot */}
+                        <circle cx="22" cy="40" r="2" fill="var(--muted)"/>
+                      </svg>
+                    );
+                  })()}
                   <div style={{display:'flex', gap:6, flexShrink:0}}>
                     {!reorderMode && <button onClick={() => setEditId(ab.id)} style={S.btnSmall}>Edit</button>}
                     {!reorderMode && <button onClick={() => setConfirmAB(ab.id)} style={S.btnDanger}>Del</button>}
@@ -2197,10 +2233,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Spray Chart ── */}
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-          <div style={{...S.sectionTitle, marginBottom:0}}>
-            Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}
+          <div style={{display:'flex', alignItems:'center', gap:6}}>
+            <span style={{...S.sectionTitle, marginBottom:0}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
+            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
           </div>
-          <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
         </div>
         {!sprayCollapsed && (
           <div style={{display:'flex', alignItems:'center', gap:8, paddingTop:10, flexWrap:'wrap'}}>
@@ -2247,17 +2283,18 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             )}
           </div>
         )}
-        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'} mapped</div>}
+        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}</div>}
       </div>
 
       {/* ── Fielding ── */}
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
-            if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
-            else { setFieldingCollapsed(c=>!c); }
+          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>{
+            if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false); }
+            else { setFieldingCollapsed(c=>!c); setFieldingReorderMode(false); }
           }}>
-            Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}
+            <span style={{...S.sectionTitle, marginBottom:0}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showFieldingForm && !fieldingCollapsed && fieldingEntries.length > 1 && (
@@ -2284,10 +2321,6 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               }}>
               {(!fieldingCollapsed && showFieldingForm) ? 'Cancel' : '+ Record Fielding'}
             </button>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
-              if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
-              else { setFieldingCollapsed(c=>!c); }
-            }}></i>
           </div>
         </div>
 
