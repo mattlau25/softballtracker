@@ -465,14 +465,6 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     return { x: fracX * IMG_W, y: fracY * IMG_H };
   };
 
-  const handleClick = e => {
-    if (!interactive) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * IMG_W);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * IMG_H);
-    onPlot && onPlot({ x, y, w: IMG_W, h: IMG_H });
-  };
-
   const ABBREVS = {
     'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR',
     'Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO',
@@ -482,18 +474,20 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
   };
 
   const dotColor = outcome => {
-    if (outcome === 'Single')   return '#86efac';  // light green
-    if (outcome === 'Double')   return '#22c55e';  // mid green
-    if (outcome === 'Triple')   return '#16a34a';  // dark green
-    if (outcome === 'Home Run') return '#14532d';  // very dark green
-    if (COUNTS_AS_HIT.has(outcome)) return '#22c55e';
-    return '#ef4444';  // red for outs
+    if (outcome === 'Single')   return '#4a7c59';  // muted mid-green
+    if (outcome === 'Double')   return '#2d6a4f';  // deeper green
+    if (outcome === 'Triple')   return '#1b4332';  // dark forest green
+    if (outcome === 'Home Run') return '#081c15';  // near-black green
+    if (COUNTS_AS_HIT.has(outcome)) return '#2d6a4f';
+    if (OUT_OUTCOMES.includes(outcome)) return '#9b2335'; // muted red for outs
+    return '#3a5f8a';  // muted slate-blue for "other"
   };
-  const dotTextColor = outcome => {
-    if (outcome === 'Single') return '#14532d';  // dark text on light bg
-    return 'white';
+  const dotTextColor = () => 'white';
+  const lineColor = outcome => {
+    if (COUNTS_AS_HIT.has(outcome)) return '#74b08a'; // muted green line
+    if (OUT_OUTCOMES.includes(outcome)) return '#c47a7a'; // muted red line
+    return '#7a9fc2'; // muted blue line for other
   };
-  const lineColor = outcome => COUNTS_AS_HIT.has(outcome) ? '#86efac' : '#fca5a5';
 
   const visibleHits = hits.filter(h => showOuts ? true : COUNTS_AS_HIT.has(h.outcome));
   const DOT_R = 60, FONT = 38;
@@ -521,11 +515,19 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     );
   }
 
+  const handleImageClick = e => {
+    if (!interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * IMG_W);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * IMG_H);
+    onPlot && onPlot({ x, y, w: IMG_W, h: IMG_H });
+  };
+
   return (
-    <div style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none'}}
-      onClick={handleClick}>
-      <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
-      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
+    <div style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none', paddingTop: interactive ? '12%' : 0}}>
+      <div style={{position:'relative'}} onClick={handleImageClick}>
+        <img src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
+        <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
         {visibleHits.map((h,i) => {
           const p = toPx(h.spray);
           return <line key={`l${i}`} x1={HOME_PX} y1={HOME_PY} x2={p.x} y2={p.y}
@@ -552,6 +554,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
           );
         })()}
       </svg>
+      </div>
     </div>
   );
 }
@@ -2061,7 +2064,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     <div style={S.listSub}>
                       {[ab.batName, ab.position, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
                     </div>
-                    {ab.comments && <div style={{...S.hint, marginTop:3, fontStyle:'italic'}}>"{ab.comments}"</div>}
+                    {ab.comments && <div style={{...S.hint, marginTop:3, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
                   <div style={{display:'flex', gap:6, flexShrink:0}}>
                     <button onClick={() => setEditId(ab.id)} style={S.btnSmall}>Edit</button>
