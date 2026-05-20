@@ -1011,7 +1011,7 @@ function BatsPage({ uid }) {
             <input style={S.input} value={form.name} onChange={e => upd('name', e.target.value)} placeholder="e.g. DeMarini CF Zen 26oz"/>
           </div>
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
-            <label style={S.label}>Nickname</label>
+            <label style={S.label}>Nickname *</label>
             <input style={S.input} value={form.nickname||''} onChange={e => upd('nickname', e.target.value)} placeholder="e.g. The Beast"/>
           </div>
           <div style={S.formGroup}>
@@ -1042,7 +1042,7 @@ function BatsPage({ uid }) {
       </div>
       <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
         <button onClick={() => setEditing(null)} style={S.btnSecondary}>Cancel</button>
-        <button onClick={save} disabled={!form.name} style={S.btnPrimary}>{editing === 'new' ? 'Add Bat' : 'Save Changes'}</button>
+        <button onClick={save} disabled={!form.name || !form.nickname} style={S.btnPrimary}>{editing === 'new' ? 'Add Bat' : 'Save Changes'}</button>
       </div>
     </div>
   );
@@ -2203,7 +2203,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     </div>
                     {/* Row 2: bat + comments — hidden on mobile */}
                     <div className="ab-card-sub" style={{...S.listSub, marginTop:6}}>
-                      {[(ab.batNickname || ab.batName), (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
+                      {(() => {
+                        const liveBat = bats.find(b => b.id === ab.batId);
+                        const displayName = liveBat?.nickname || liveBat?.name || ab.batNickname || ab.batName;
+                        return [displayName, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ');
+                      })()}
                     </div>
                     {ab.comments && <div className="ab-card-sub" style={{...S.hint, marginTop:2, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
