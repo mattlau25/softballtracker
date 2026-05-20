@@ -2208,7 +2208,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     const W = ab.spray.w || 320, H = ab.spray.h || 281;
                     const fracX = ab.spray.x / W;
                     const fracY = ab.spray.y / H;
-                    const SIZE = 52; // rendered size in px
+                    const SIZE = 44;
                     const dotX = fracX * SIZE;
                     const dotY = fracY * SIZE;
                     const isHR = ab.outcome === 'Home Run';
@@ -2218,7 +2218,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     return (
                       <div style={{position:'relative', width:SIZE, height:SIZE, flexShrink:0, marginLeft:8, marginRight:10}}>
                         <img src={DIAMOND_URL} alt="" style={{width:SIZE, height:SIZE, display:'block', borderRadius:4, opacity:0.85}}/>
-                        <svg style={{position:'absolute', top:0, left:0}} width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+                        <svg style={{position:'absolute', top:0, left:0, overflow:'visible'}} width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
                           <line x1={SIZE*0.5} y1={SIZE*0.877} x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="1" strokeOpacity="0.5"/>
                           <circle cx={dotX} cy={dotY} r="3" fill={dotColor} fillOpacity="0.9"/>
                         </svg>
