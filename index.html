@@ -2208,26 +2208,21 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     const W = ab.spray.w || 320, H = ab.spray.h || 281;
                     const fracX = ab.spray.x / W;
                     const fracY = ab.spray.y / H;
-                    // Large spray chart: outfield wall ~fracY=0.12, home plate ~fracY=0.87
-                    // Remap so outfield=top of mini (y=18), home=bottom (y=44)
-                    const FIELD_TOP = 0.12, FIELD_BOT = 0.87;
-                    const t = Math.max(0, Math.min(1, (fracY - FIELD_TOP) / (FIELD_BOT - FIELD_TOP)));
-                    const svgX = 11 + fracX * 46;
-                    const svgY = 18 + t * 26;
-                    // Dot colour matches the pill: green for hits, orange for HR, red for outs, blue for other
+                    const SIZE = 52; // rendered size in px
+                    const dotX = fracX * SIZE;
+                    const dotY = fracY * SIZE;
                     const isHR = ab.outcome === 'Home Run';
                     const isHitDot = COUNTS_AS_HIT.has(ab.outcome);
                     const isOutDot = OUT_OUTCOMES.includes(ab.outcome);
                     const dotColor = isHR ? '#d4782a' : isHitDot ? '#1a7a5a' : isOutDot ? '#c0392b' : '#2e6db4';
                     return (
-                      <svg width="48" height="38" viewBox="6 4 56 44" style={{flexShrink:0, marginLeft:8, marginRight:10, opacity:0.9}}>
-                        <path d="M34,44 L11,18 A26,26 0 0,1 57,18 Z" fill="#eef3ee" stroke="#c8d5c8" strokeWidth="0.8"/>
-                        <line x1="34" y1="44" x2="11" y2="18" stroke="#b0bdb0" strokeWidth="0.6" strokeDasharray="2,1.5"/>
-                        <line x1="34" y1="44" x2="57" y2="18" stroke="#b0bdb0" strokeWidth="0.6" strokeDasharray="2,1.5"/>
-                        <line x1="34" y1="44" x2={svgX} y2={svgY} stroke={dotColor} strokeWidth="0.8" strokeOpacity="0.4"/>
-                        <circle cx={svgX} cy={svgY} r="2.5" fill={dotColor} fillOpacity="0.85"/>
-                        <circle cx="34" cy="44" r="1.8" fill="#a0aec0"/>
-                      </svg>
+                      <div style={{position:'relative', width:SIZE, height:SIZE, flexShrink:0, marginLeft:8, marginRight:10}}>
+                        <img src={DIAMOND_URL} alt="" style={{width:SIZE, height:SIZE, display:'block', borderRadius:4, opacity:0.85}}/>
+                        <svg style={{position:'absolute', top:0, left:0}} width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+                          <line x1={SIZE*0.5} y1={SIZE*0.877} x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="1" strokeOpacity="0.5"/>
+                          <circle cx={dotX} cy={dotY} r="3" fill={dotColor} fillOpacity="0.9"/>
+                        </svg>
+                      </div>
                     );
                   })()}
                   <div style={{display:'flex', gap:6, flexShrink:0}}>
