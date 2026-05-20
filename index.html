@@ -1825,8 +1825,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [fieldingDragIdx, setFieldingDragIdx] = useState(null);
   const [fieldingDragOverIdx, setFieldingDragOverIdx] = useState(null);
   const [abCollapsed, setAbCollapsed] = useState(false);
+  const [abFormFromCollapsed, setAbFormFromCollapsed] = useState(false);
   const [sprayCollapsed, setSprayCollapsed] = useState(false);
   const [fieldingCollapsed, setFieldingCollapsed] = useState(false);
+  const [fieldingFormFromCollapsed, setFieldingFormFromCollapsed] = useState(false);
   const [showFieldingForm, setShowFieldingForm] = useState(false);
   const [fieldingEntries, setFieldingEntries] = useState([]);
   const [fieldingForm, setFieldingForm] = useState({ inning:'', position:'', putouts:0, assists:0, errors:0, notes:'' });
@@ -2079,9 +2081,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); setReorderMode(false); }
             else { setAbCollapsed(c=>!c); setReorderMode(false); }
           }}>
-          <div style={{display:'flex', alignItems:'center', gap:6}}>
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle', position:'relative', top:1}}></i>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, position:'relative', bottom:1}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showForm && !editId && !abCollapsed && abs.length > 1 && (
@@ -2092,12 +2094,15 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               onClick={e => {
                 e.stopPropagation();
                 if (abCollapsed) {
+                  setAbFormFromCollapsed(true);
                   setAbCollapsed(false);
                   setReorderMode(false);
                   setShowForm(true);
                 } else if (showForm) {
                   setShowForm(false);
+                  if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
                 } else {
+                  setAbFormFromCollapsed(false);
                   setReorderMode(false);
                   setShowForm(true);
                 }
@@ -2239,9 +2244,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Spray Chart ── */}
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-          <div style={{display:'flex', alignItems:'center', gap:6}}>
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
-            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle', position:'relative', top:1}}></i>
+            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, position:'relative', bottom:1}}></i>
           </div>
         </div>
         {!sprayCollapsed && (
@@ -2298,9 +2303,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false); }
             else { setFieldingCollapsed(c=>!c); setFieldingReorderMode(false); }
           }}>
-          <div style={{display:'flex', alignItems:'center', gap:6}}>
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle', position:'relative', top:1}}></i>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, position:'relative', bottom:1}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showFieldingForm && !fieldingCollapsed && fieldingEntries.length > 1 && (
@@ -2311,6 +2316,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               onClick={e => {
                 e.stopPropagation();
                 if (fieldingCollapsed) {
+                  setFieldingFormFromCollapsed(true);
                   setFieldingCollapsed(false);
                   setShowFieldingForm(true);
                   setEditFieldingId(null);
@@ -2318,7 +2324,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 } else if (showFieldingForm) {
                   setShowFieldingForm(false);
                   setEditFieldingId(null);
+                  if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }
                 } else {
+                  setFieldingFormFromCollapsed(false);
                   setShowFieldingForm(true);
                   setEditFieldingId(null);
                   setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''});
