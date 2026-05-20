@@ -2119,7 +2119,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 <ABForm uid={uid} gameId={gameId} bats={bats}
                   defaultPosition={profile.primaryPosition||''}
                   onSave={() => { setShowForm(false); loadABs(); }}
-                  onCancel={() => setShowForm(false)}/>
+                  onCancel={() => { setShowForm(false); if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); } }}
               </div>
             )}
             {loading && <p style={S.muted}>Loading...</p>}
@@ -2200,32 +2200,29 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     </div>
                     {ab.comments && <div className="ab-card-sub" style={{...S.hint, marginTop:2, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
-                  {/* Mini spray diagram — home plate bottom-center, field fans out upward */}
+                  {/* Mini spray diagram */}
                   {!reorderMode && ab.spray && (() => {
                     const W = ab.spray.w || 320, H = ab.spray.h || 281;
-                    const nx = ab.spray.x / W; // 0=left, 1=right
-                    const ny = ab.spray.y / H; // 0=deep(top), 1=near home(bottom)
-                    // SVG 56x52. Home plate at (28, 50). Field fans ~90° upward.
-                    // Left foul line: home(28,50) → (0,4). Right foul line: home(28,50) → (56,4).
-                    // Arc at top from (0,4) through (28,0) to (56,4).
-                    // Map spray coords: nx 0→1 = SVG x 0→56, ny 0→1 = SVG y 4→50
-                    const dotX = nx * 56;
-                    const dotY = 4 + ny * 46;
+                    // Normalise to 0-1 fractions (same as toPx in SprayChart)
+                    const fracX = ab.spray.x / W;
+                    const fracY = ab.spray.y / H;
+                    // SVG 60w x 54h. Home plate at (30,52).
+                    // Field fans upward. Map: fracX 0→1 = SVG x 0→60, fracY 0→1 = SVG y 2→52
+                    const dotX = fracX * 60;
+                    const dotY = 2 + fracY * 50;
                     const isHitDot = COUNTS_AS_HIT.has(ab.outcome);
                     const dotColor = isHitDot ? '#276749' : '#c53030';
                     return (
-                      <svg width="52" height="48" viewBox="0 0 56 52" style={{flexShrink:0, marginLeft:8, marginRight:10, opacity:0.9}}>
-                        {/* Field wedge: home at bottom-centre, ~90° fan, arc at top */}
-                        <path d="M28,50 L0,4 Q28,-3 56,4 Z" fill="#eef3ee" stroke="#c8d5c8" strokeWidth="1.2"/>
+                      <svg width="52" height="48" viewBox="0 0 60 54" style={{flexShrink:0, marginLeft:8, marginRight:10, opacity:0.9}}>
+                        {/* Wide wedge ~110°: home(30,52) → left(0,8) arc(30,0) right(60,8) */}
+                        <path d="M30,52 L0,8 Q30,-2 60,8 Z" fill="#eef3ee" stroke="#c8d5c8" strokeWidth="1.2"/>
                         {/* Foul lines */}
-                        <line x1="28" y1="50" x2="0" y2="4" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
-                        <line x1="28" y1="50" x2="56" y2="4" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
-                        {/* Line from home to hit location */}
-                        <line x1="28" y1="50" x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="1" strokeOpacity="0.4"/>
-                        {/* Hit dot */}
+                        <line x1="30" y1="52" x2="0" y2="8" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
+                        <line x1="30" y1="52" x2="60" y2="8" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
+                        {/* Line from home to dot */}
+                        <line x1="30" y1="52" x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="1" strokeOpacity="0.4"/>
                         <circle cx={dotX} cy={dotY} r="3.5" fill={dotColor} fillOpacity="0.85"/>
-                        {/* Home plate */}
-                        <circle cx="28" cy="50" r="2.5" fill="#a0aec0"/>
+                        <circle cx="30" cy="52" r="2.5" fill="#a0aec0"/>
                       </svg>
                     );
                   })()}
@@ -2386,7 +2383,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     placeholder="e.g. Made a diving stop at 3B..."/>
                 </div>
                 <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
-                  <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null);}} style={S.btnSecondary}>Cancel</button>
+                  <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null); if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }}} style={S.btnSecondary}>Cancel</button>
                   <button onClick={saveFielding} disabled={!fieldingForm.position} style={S.btnPrimary}>
                     {editFieldingId ? 'Save Changes' : 'Save Fielding'}
                   </button>
