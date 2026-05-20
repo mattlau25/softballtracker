@@ -2074,13 +2074,13 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── At Bats ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
             if (abCollapsed && !showForm) { setAbCollapsed(false); }
             else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); setReorderMode(false); }
             else { setAbCollapsed(c=>!c); setReorderMode(false); }
           }}>
-            <span style={{...S.sectionTitle, marginBottom:0}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
+          <div style={{display:'flex', alignItems:'center', gap:6}}>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
             <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center'}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
@@ -2191,32 +2191,31 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                       {dir && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{dir}</span>}
                     </div>
                     {/* Row 2: bat + comments — hidden on mobile */}
-                    <div className="ab-card-sub" style={{...S.listSub, marginTop:4}}>
+                    <div className="ab-card-sub" style={{...S.listSub, marginTop:6}}>
                       {[ab.batName, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
                     </div>
                     {ab.comments && <div className="ab-card-sub" style={{...S.hint, marginTop:2, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
-                  {/* Mini spray diagram — ~90° wide wedge */}
+                  {/* Mini spray diagram — true ~90° wedge */}
                   {!reorderMode && ab.spray && (() => {
                     const W = ab.spray.w || 320, H = ab.spray.h || 281;
-                    const nx = ab.spray.x / W; // 0=left, 1=right
-                    const ny = ab.spray.y / H; // 0=top(deep), 1=bottom(home)
-                    // SVG: 50w x 44h. Home plate at bottom-centre (25,42).
-                    // ~90° wedge: left foul line goes to (2,10), right to (48,10), arc top at (25,2)
-                    const cx = 25, cy = 42;
-                    // Map hit coords into the wedge area
-                    // nx 0→1 maps to x 2→48, ny 0→1 maps to y 2→42
-                    const dotX = 2 + nx * 46;
-                    const dotY = 2 + ny * 40;
+                    const nx = ab.spray.x / W;
+                    const ny = ab.spray.y / H;
+                    // 54w x 48h SVG. Home plate at bottom-centre (27, 46).
+                    // 90° wedge: foul lines go to top-left (0,8) and top-right (54,8)
+                    const cx = 27, cy = 46;
+                    // Map hit: nx 0→1 = x 0→54, ny 0→1 = y 4→46
+                    const dotX = nx * 54;
+                    const dotY = 4 + ny * 42;
                     const isHitDot = COUNTS_AS_HIT.has(ab.outcome);
                     const dotColor = isHitDot ? '#276749' : '#c53030';
                     return (
-                      <svg width="50" height="44" viewBox="0 0 50 44" style={{flexShrink:0, marginLeft:8, marginRight:10, opacity:0.9}}>
-                        {/* ~90° wedge from home plate */}
-                        <path d="M25,42 L2,10 Q25,1 48,10 Z" fill="#eef3ee" stroke="#c8d5c8" strokeWidth="1"/>
+                      <svg width="54" height="48" viewBox="0 0 54 48" style={{flexShrink:0, marginLeft:8, marginRight:10, opacity:0.9}}>
+                        {/* 90° wedge: home(27,46) → top-left(0,8) arc top(27,2) → top-right(54,8) */}
+                        <path d="M27,46 L0,8 Q27,2 54,8 Z" fill="#eef3ee" stroke="#c8d5c8" strokeWidth="1"/>
                         {/* Foul lines */}
-                        <line x1={cx} y1={cy} x2="2" y2="10" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
-                        <line x1={cx} y1={cy} x2="48" y2="10" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
+                        <line x1={cx} y1={cy} x2="0" y2="8" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
+                        <line x1={cx} y1={cy} x2="54" y2="8" stroke="#b0bdb0" strokeWidth="0.8" strokeDasharray="2,2"/>
                         {/* Line from home to hit */}
                         <line x1={cx} y1={cy} x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="0.9" strokeOpacity="0.45"/>
                         {/* Hit dot */}
@@ -2242,7 +2241,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
           <div style={{display:'flex', alignItems:'center', gap:6}}>
-            <span style={{...S.sectionTitle, marginBottom:0}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
             <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center'}}></i>
           </div>
         </div>
@@ -2296,12 +2295,12 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── Fielding ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-          <div style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
             if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false); }
             else { setFieldingCollapsed(c=>!c); setFieldingReorderMode(false); }
           }}>
-            <span style={{...S.sectionTitle, marginBottom:0}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
+          <div style={{display:'flex', alignItems:'center', gap:6}}>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
             <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center'}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
