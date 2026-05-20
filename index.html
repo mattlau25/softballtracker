@@ -1689,6 +1689,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     <div>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14, paddingTop:4}}>
         <div style={S.cardTitle}>{isEdit ? 'Edit At Bat' : 'Record At Bat'}</div>
+        {isEdit && <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>}
       </div>
 
       {/* Bat */}
@@ -2207,13 +2208,17 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     const W = ab.spray.w || 320, H = ab.spray.h || 281;
                     const fracX = ab.spray.x / W;
                     const fracY = ab.spray.y / H;
-                    // 90° sector, home at (34,44), foul lines to (11,18) and (57,18)
-                    // Arc radius 26 — matches confirmed shape M340,410 L110,180 A260,260 0 0,1 570,180
-                    // fracX 0→1 = x 11→57, fracY 0→1 = y 18→44
+                    // Large spray chart: outfield wall ~fracY=0.12, home plate ~fracY=0.87
+                    // Remap so outfield=top of mini (y=18), home=bottom (y=44)
+                    const FIELD_TOP = 0.12, FIELD_BOT = 0.87;
+                    const t = Math.max(0, Math.min(1, (fracY - FIELD_TOP) / (FIELD_BOT - FIELD_TOP)));
                     const svgX = 11 + fracX * 46;
-                    const svgY = 18 + fracY * 26;
+                    const svgY = 18 + t * 26;
+                    // Dot colour matches the pill: green for hits, orange for HR, red for outs, blue for other
+                    const isHR = ab.outcome === 'Home Run';
                     const isHitDot = COUNTS_AS_HIT.has(ab.outcome);
-                    const dotColor = isHitDot ? '#276749' : '#c53030';
+                    const isOutDot = OUT_OUTCOMES.includes(ab.outcome);
+                    const dotColor = isHR ? '#d4782a' : isHitDot ? '#1a7a5a' : isOutDot ? '#c0392b' : '#2e6db4';
                     return (
                       <svg width="48" height="38" viewBox="6 4 56 44" style={{flexShrink:0, marginLeft:8, marginRight:10, opacity:0.9}}>
                         <path d="M34,44 L11,18 A26,26 0 0,1 57,18 Z" fill="#eef3ee" stroke="#c8d5c8" strokeWidth="0.8"/>
