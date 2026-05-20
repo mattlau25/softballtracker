@@ -312,7 +312,6 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 @media (max-width: 640px) {
   .nav-profile-desktop { display: none !important; }
-  .ab-card-sub { display: none !important; }
 }
 </style>
 </head>
@@ -958,7 +957,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
 function BatsPage({ uid }) {
   const [bats, setBats] = useState([]);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', notes:'' });
+  const [form, setForm] = useState({ name:'', nickname:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', notes:'' });
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -966,7 +965,7 @@ function BatsPage({ uid }) {
   const load = () => batsCol(uid).orderBy('createdAt','desc').get().then(s => { setBats(s.docs.map(d => ({id:d.id,...d.data()}))); setLoading(false); });
   useEffect(() => { load(); }, [uid]);
   const upd = (k, v) => setForm(f => ({...f, [k]: v}));
-  const startNew = () => { setForm({ name:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', notes:'' }); setEditing('new'); };
+  const startNew = () => { setForm({ name:'', nickname:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', notes:'' }); setEditing('new'); };
   const startEdit = bat => { setForm({...bat}); setEditing(bat.id); };
   const save = async () => {
     const data = { ...form, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
@@ -1010,6 +1009,10 @@ function BatsPage({ uid }) {
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Bat Name / Model *</label>
             <input style={S.input} value={form.name} onChange={e => upd('name', e.target.value)} placeholder="e.g. DeMarini CF Zen 26oz"/>
+          </div>
+          <div style={{...S.formGroup, gridColumn:'1/-1'}}>
+            <label style={S.label}>Nickname</label>
+            <input style={S.input} value={form.nickname||''} onChange={e => upd('nickname', e.target.value)} placeholder="e.g. The Beast"/>
           </div>
           <div style={S.formGroup}>
             <label style={S.label}>Weight (oz)</label>
@@ -1056,6 +1059,7 @@ function BatsPage({ uid }) {
       <div style={{flex:1}}>
         <div style={S.listTitle}>
           {bat.name}
+          {bat.nickname && <span style={{color:'var(--muted)', fontWeight:400, fontSize:13, marginLeft:6}}>"{bat.nickname}"</span>}
           {bat.favourite && !archived && <span style={{...S.badge, fontSize:10, marginLeft:6, color:'#92400e', background:'#fef3c7', border:'1px solid #fde68a'}}>Favourite</span>}
           {archived && <span style={{...S.badge, fontSize:10, marginLeft:6}}>Archived</span>}
         </div>
@@ -1541,7 +1545,7 @@ function BatDropdown({ bats, value, onChange }) {
       style={{padding:'10px 14px', cursor:'pointer', background: value===bat.id ? 'var(--border2)' : 'transparent', borderBottom:'1px solid var(--border2)'}}
       onMouseEnter={e => e.currentTarget.style.background='var(--border2)'}
       onMouseLeave={e => e.currentTarget.style.background = value===bat.id ? 'var(--border2)' : 'transparent'}>
-      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>{bat.name}</div>
+      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>{bat.nickname || bat.name}{bat.nickname && <span style={{color:'var(--muted)', fontWeight:400, fontSize:12, marginLeft:4}}>({bat.name})</span>}</div>
       {batSubline(bat) && <div style={{fontSize:12, color:'var(--muted)', marginTop:2}}>{batSubline(bat)}</div>}
     </div>
   );
@@ -1553,7 +1557,7 @@ function BatDropdown({ bats, value, onChange }) {
         <div>
           {selected ? (
             <>
-              <div style={{fontSize:14, color:'var(--text)', fontWeight: selected.favourite ? 600 : 400}}>{selected.name}</div>
+              <div style={{fontSize:14, color:'var(--text)', fontWeight: selected.favourite ? 600 : 400}}>{selected.nickname || selected.name}{selected.nickname && <span style={{color:'var(--muted)', fontWeight:400, fontSize:12, marginLeft:4}}>({selected.name})</span>}</div>
               {batSubline(selected) && <div style={{fontSize:12, color:'var(--muted)'}}>{batSubline(selected)}</div>}
             </>
           ) : <span style={{color:'var(--muted)'}}>— Select bat —</span>}
@@ -1629,7 +1633,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     const bat = bats.find(b => b.id === f.batId);
     const bases = autoBase || f.bases || 0;
     const data = {
-      ...f, batName: bat?.name || '',
+      ...f, batName: bat?.name || '', batNickname: bat?.nickname || '',
       bases,
       countAsAB: COUNTS_AS_AB.has(f.outcome),
       countAsHit: COUNTS_AS_HIT.has(f.outcome),
@@ -2199,7 +2203,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     </div>
                     {/* Row 2: bat + comments — hidden on mobile */}
                     <div className="ab-card-sub" style={{...S.listSub, marginTop:6}}>
-                      {[ab.batName, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
+                      {[(ab.batNickname || ab.batName), (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
                     </div>
                     {ab.comments && <div className="ab-card-sub" style={{...S.hint, marginTop:2, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
