@@ -1104,6 +1104,7 @@ function BatsPage({ uid }) {
 async function exportCSV(uid) {
   const gsnap = await gamesCol(uid).orderBy('date','desc').get();
   const games = gsnap.docs.map(d => ({id:d.id,...d.data()}));
+  games.sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
   const rows = [['Date','Day','Opponent','Park','Home/Away','Day/Night','My Score','Opp Score','Result','Team','League','Tier','Season','PA','AB','H','2B','3B','HR','R','RBI','BB','K','AVG','OBP','SLG','PO','A','E','AB#','Outcome','Sub-Outcome','Bases','RBI','Run','Bat','Position','Hit Direction','Spray X','Spray Y','AB Comments','Game Comments']];
   for (const g of games) {
     const absSnap = await absCol(uid, g.id).orderBy('timestamp','asc').get();
@@ -1257,6 +1258,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
     setLoading(true);
     const snap = await gamesCol(uid).orderBy('date','desc').get();
     const gdata = snap.docs.map(d => ({id:d.id,...d.data()}));
+    gdata.sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
     setGames(gdata);
     const abResults = await Promise.all(gdata.map(g => absCol(uid,g.id).orderBy('timestamp','asc').get()));
     const absMap = {};
@@ -1293,7 +1295,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
 
   const streak = (() => {
     if (!games.length) return null;
-    const sorted = [...games].sort((a,b) => b.date.localeCompare(a.date));
+    const sorted = [...games].sort((a,b) => { const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
     let hitStreak = 0;
     for (const g of sorted) {
       const abs = allABs[g.id] || [];
@@ -2119,7 +2121,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 <ABForm uid={uid} gameId={gameId} bats={bats}
                   defaultPosition={profile.primaryPosition||''}
                   onSave={() => { setShowForm(false); loadABs(); }}
-                  onCancel={() => { setShowForm(false); if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); } }}
+                  onCancel={() => { setShowForm(false); if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); } }}/>
               </div>
             )}
             {loading && <p style={S.muted}>Loading...</p>}
@@ -2697,7 +2699,7 @@ function applyFilters(games, f) {
     return true;
   });
   if (f.lastN && parseInt(f.lastN)>0)
-    out = [...out].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,parseInt(f.lastN));
+    out = [...out].sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); }).slice(0,parseInt(f.lastN));
   return out;
 }
 
@@ -2960,7 +2962,7 @@ function StatsPage({ uid }) {
     let bestH=0, bestHDate='', bestRBI=0, bestRBIDate='', bestHR=0, bestHRDate='';
     let bestAVG=0, bestAVGDate='', bestAVGLabel='';
     let hitStreak=0, curStreak=0, streakEnd='';
-    const sorted=[...games].sort((a,b)=>b.date.localeCompare(a.date));
+    const sorted=[...games].sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
     let activeStreak=0;
     for (const g of sorted) {
       const abs=allABs[g.id]||[], s=calcGameStats(abs,inclFoulK);
