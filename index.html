@@ -559,8 +559,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     const rect = img.getBoundingClientRect();
     const mx = ((e.clientX - rect.left) / rect.width) * IMG_W;
     const my = ((e.clientY - rect.top) / rect.height) * IMG_H;
-    const dist = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
-    if (dist <= DOT_R * 2) {
+    if (Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2) <= DOT_R * 2) {
       isDragging.current = true;
       dragMoved.current = false;
       e.preventDefault();
@@ -583,15 +582,14 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     if (pt) onPlotRef.current && onPlotRef.current(pt);
   };
 
-  // Native non-passive touch listeners — e.preventDefault() works here,
-  // blocking iOS long-press image-save sheet and scroll interference.
+  // Native non-passive touch listeners so e.preventDefault() actually works,
+  // blocking iOS long-press image-save sheet on every touch.
   React.useEffect(() => {
     if (!interactive) return;
     const el = containerRef.current;
     if (!el) return;
-
     const onTouchStart = e => {
-      e.preventDefault(); // suppress long-press context menu on every touch
+      e.preventDefault();
       if (!plotted) return;
       const touch = e.touches[0];
       const p = toPx(plotted);
@@ -605,7 +603,6 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
         dragMoved.current = false;
       }
     };
-
     const onTouchMove = e => {
       e.preventDefault();
       if (!isDragging.current) return;
@@ -618,11 +615,9 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
       const y = Math.max(DOT_R, Math.min(IMG_H - DOT_R, Math.round(((touch.clientY - rect.top) / rect.height) * IMG_H)));
       onPlotRef.current && onPlotRef.current({ x, y, w: IMG_W, h: IMG_H });
     };
-
     const onTouchEnd = e => {
       e.preventDefault();
       if (isDragging.current) { isDragging.current = false; dragMoved.current = false; return; }
-      // Tap-to-place
       if (!dragMoved.current && e.changedTouches.length > 0) {
         const touch = e.changedTouches[0];
         const img = imgRef.current;
@@ -635,9 +630,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
       }
       dragMoved.current = false;
     };
-
     const onContextMenu = e => e.preventDefault();
-
     el.addEventListener('touchstart',  onTouchStart,  { passive: false });
     el.addEventListener('touchmove',   onTouchMove,   { passive: false });
     el.addEventListener('touchend',    onTouchEnd,    { passive: false });
@@ -1679,7 +1672,6 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
   const [toast, setToast] = useState(null);
   const [validModal, setValidModal] = useState(null);
-  // Any change marks the form dirty for collapse/nav warnings
   const upd = (k, v) => { setF(x => ({...x, [k]: v})); window.__dirtyForm = true; };
 
   const outcomeGroup = HIT_OUTCOMES.includes(f.outcome) ? 'hit' : OUT_OUTCOMES.includes(f.outcome) ? 'out' : OTHER_OUTCOMES.includes(f.outcome) ? 'other' : '';
@@ -1691,14 +1683,13 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const autoBase = HIT_BASES[f.outcome] || null;
   const showRBI = f.outcome && !['Strikeout'].includes(f.outcome) && !isFoulK && !(isFoulOut && !f.subOutcome);
 
-  // Changing outcome marks dirty
   const setOutcome = (o) => {
     haptic('light');
     setF(x => ({...x, outcome: o, subOutcome:'', bases: HIT_BASES[o] || 0}));
     window.__dirtyForm = true;
   };
 
-  // Cancel always just cancels — warnings fire at the collapse/navigate level
+  // Cancel always just cancels — warnings fire at collapse/navigate level
   const handleCancel = () => {
     window.__dirtyForm = false;
     onCancel();
@@ -1931,7 +1922,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const fieldingCol = () => gamesCol(uid).doc(gameId).collection('fielding');
 
   const [fieldingToast, setFieldingToast] = useState(false);
-  const [warnModal, setWarnModal] = useState(null); // {message, onConfirm} | {message, onConfirm:null} OK-only
+  const [warnModal, setWarnModal] = useState(null);
 
   const loadFielding = () => fieldingCol().orderBy('createdAt','asc').get()
     .then(s => setFieldingEntries(s.docs.map(d=>({id:d.id,...d.data()}))));
@@ -1960,7 +1951,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   };
 
   const startEditFielding = entry => {
-    window.__dirtyForm = false; // reset; user hasn't changed anything yet in edit mode
+    window.__dirtyForm = false;
     setFieldingForm({ inning: entry.inning||'', position: entry.position||'', putouts: entry.putouts||0, assists: entry.assists||0, fe: entry.fe !== undefined ? entry.fe : (entry.errors||0), te: entry.te||0, notes: entry.notes||'' });
     setEditFieldingId(entry.id);
     setShowFieldingForm(true);
@@ -2234,27 +2225,19 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             {!showForm && !editId && !abCollapsed && abs.length > 1 && (
               <button onClick={e=>{e.stopPropagation();setReorderMode(r=>!r);}} style={S.btnSecondary}>{reorderMode ? 'Done' : 'Reorder'}</button>
             )}
-            <button
-              style={(!abCollapsed && showForm) ? S.btnSecondary : S.btnPrimary}
-              onClick={e => {
-                e.stopPropagation();
-                if (abCollapsed) {
-                  setAbFormFromCollapsed(true); setAbCollapsed(false); setReorderMode(false); setShowForm(true);
-                } else if (showForm) {
-                  if (window.__dirtyForm) {
-                    setWarnModal({ message: 'You have unsaved changes. Discard?', onConfirm: () => {
-                      window.__dirtyForm = false; setShowForm(false);
-                      if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
-                    }}); return;
+            {!showForm && !editId && !abCollapsed && (
+              <button style={S.btnPrimary}
+                onClick={e => {
+                  e.stopPropagation();
+                  if (abCollapsed) {
+                    setAbFormFromCollapsed(true); setAbCollapsed(false);
                   }
-                  setShowForm(false);
-                  if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
-                } else {
-                  setAbFormFromCollapsed(false); setReorderMode(false); setShowForm(true);
-                }
-              }}>
-              {(!abCollapsed && showForm) ? 'Cancel' : '+ Record AB'}
-            </button>
+                  window.__dirtyForm = false;
+                  setReorderMode(false); setShowForm(true); setAbFormFromCollapsed(false);
+                }}>
+                + Record AB
+              </button>
+            )}
           </div>
         </div>
 
@@ -2464,9 +2447,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               <button style={S.btnPrimary}
                 onClick={e => {
                   e.stopPropagation();
-                  if (fieldingCollapsed) {
-                    setFieldingFormFromCollapsed(true); setFieldingCollapsed(false);
-                  }
+                  if (fieldingCollapsed) { setFieldingFormFromCollapsed(true); setFieldingCollapsed(false); }
                   window.__dirtyForm = false;
                   setShowFieldingForm(true); setEditFieldingId(null);
                   setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,fe:0,te:0,notes:''});
@@ -2618,7 +2599,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 }
 
 // ─── WARN MODAL ────────────────────────────────────────────────────────────────
-// onCancel=null → single OK button (validation messages)
+// onCancel=null → single OK button only (used for validation messages)
 function WarnModal({ message, onConfirm, onCancel, confirmLabel='Discard', confirmColor='#c53030' }) {
   return (
     <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.4)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
@@ -3864,28 +3845,9 @@ function App() {
   const page = routeState.page;
   const gameId = routeState.gameId;
   const [prevPage, setPrevPage] = useState('games');
-  const [pendingNav, setPendingNav] = useState(null);
+  const [pendingNav, setPendingNav] = useState(null); // {newPage, gId} — blocked nav awaiting confirm
 
-  useEffect(() => {
-    const onHash = (e) => {
-      if (window.__dirtyForm) {
-        // Restore the old hash before showing the modal
-        const oldHash = e.oldURL ? new URL(e.oldURL).hash : '#games';
-        window.location.replace(window.location.pathname + window.location.search + (oldHash || '#games'));
-        const targetHash = e.newURL ? new URL(e.newURL).hash.slice(1) : 'games';
-        const target = targetHash.startsWith('game/')
-          ? { page:'game-detail', gameId: targetHash.slice(5) }
-          : { page: targetHash || 'games', gameId: null };
-        setPendingNav({ newPage: target.page, gId: target.gameId });
-        return;
-      }
-      setRouteState(getPageFromHash());
-    };
-    window.addEventListener('hashchange', onHash);
-    if (!window.location.hash) window.location.hash = 'games';
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-
+  // doNavigate: actually performs the navigation without any dirty check
   const doNavigate = (newPage, gId) => {
     if (newPage === 'game-detail') {
       setPrevPage(page === 'new-game' ? 'games' : page);
@@ -3896,10 +3858,33 @@ function App() {
     setRouteState({ page: newPage, gameId: resolvedGameId });
   };
 
+  // navigate: called by sidebar links and in-app buttons
   const navigate = (newPage, gId = null) => {
     if (window.__dirtyForm) { setPendingNav({ newPage, gId: gId ?? null }); return; }
     doNavigate(newPage, gId ?? null);
   };
+
+  // hashchange fires on browser back/forward — intercept if form is dirty
+  useEffect(() => {
+    const onHash = (e) => {
+      if (window.__dirtyForm) {
+        // Snap the URL back to where it was before the browser navigated
+        const oldHash = e.oldURL ? '#' + new URL(e.oldURL).hash.slice(1) : '#games';
+        window.location.replace(window.location.pathname + window.location.search + oldHash);
+        // Parse the destination the user was trying to reach
+        const targetRaw = e.newURL ? new URL(e.newURL).hash.slice(1) : 'games';
+        const target = targetRaw.startsWith('game/')
+          ? { page: 'game-detail', gId: targetRaw.slice(5) }
+          : { page: targetRaw || 'games', gId: null };
+        setPendingNav(target);
+        return;
+      }
+      setRouteState(getPageFromHash());
+    };
+    window.addEventListener('hashchange', onHash);
+    if (!window.location.hash) window.location.hash = 'games';
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   const setGameId = (id) => {
     setRouteState(r => ({ ...r, gameId: id }));
@@ -3942,7 +3927,7 @@ function App() {
         <WarnModal
           message="You have unsaved changes. Discard and leave this page?"
           confirmLabel="Discard"
-          onConfirm={() => { window.__dirtyForm = false; const {newPage,gId} = pendingNav; setPendingNav(null); doNavigate(newPage, gId); }}
+          onConfirm={() => { window.__dirtyForm = false; const {newPage, gId} = pendingNav; setPendingNav(null); doNavigate(newPage, gId); }}
           onCancel={() => setPendingNav(null)}
           confirmColor="#c53030"
         />
