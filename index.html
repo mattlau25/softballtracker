@@ -3242,7 +3242,7 @@ function StatsPage({ uid }) {
               <p style={{...S.hint,marginTop:8,textAlign:'center'}}>
                 {sprayFiltered.length} charted {sprayFiltered.length===1?'ball':'balls'} · {sprayScope==='season'?effectiveSeason:'Career'}
                 {' · '}<span style={{color:'var(--success)'}}>●</span> Hit
-                {sprayFilter==='all'&&<> · <span style={{color:'var(--danger)'}}>●</span> Out/Other</>}
+                {sprayFilter==='all'&&<> · <span style={{color:'var(--danger)'}}>●</span> Out · <span style={{color:'#2e6db4'}}>●</span> Other</>}
               </p>
             </>
           )}
@@ -3297,7 +3297,13 @@ function GameLogPage({ uid, setPage, setGameId }) {
   const filtered = applyFilters(games, filters);
   const sorted = [...filtered].sort((a,b)=>{
     let av,bv;
-    if(sortKey==='date'){av=a.date;bv=b.date;}
+    if(sortKey==='date'){
+      // Primary: date, secondary: time (so same-day games appear in game-time order)
+      const dateCmp = a.date<b.date?(sortDir==='asc'?-1:1):a.date>b.date?(sortDir==='asc'?1:-1):0;
+      if(dateCmp!==0) return dateCmp;
+      const at=a.time||'', bt=b.time||'';
+      return at<bt?(sortDir==='asc'?-1:1):at>bt?(sortDir==='asc'?1:-1):0;
+    }
     else if(sortKey==='rd'){av=runDiff(a);bv=runDiff(b);}
     else{av=getStatForGame(a,sortKey);bv=getStatForGame(b,sortKey);}
     return av<bv?(sortDir==='asc'?-1:1):av>bv?(sortDir==='asc'?1:-1):0;
@@ -3428,12 +3434,12 @@ function GameLogPage({ uid, setPage, setGameId }) {
                         <td style={{...tdS,textAlign:'left',paddingLeft:14,whiteSpace:'nowrap'}}>
                           <a href={pageToPath('game-detail', game.id)} onClick={e=>{ if(e.button===0&&!e.metaKey&&!e.ctrlKey){e.preventDefault(); go(game.id);} }}
                             style={{fontWeight:600,color:'#1a202c',textDecoration:'none',display:'block'}}>
-                            {fmtDate(game.date)}
+                            {fmtDate(game.date)}{game.time&&<span style={{fontWeight:400,color:'var(--muted)',fontSize:12,marginLeft:6}}>{fmtTime(game.time)}</span>}
                           </a>
-                          <div style={{fontSize:11,color:'var(--muted)'}}>{[game.teamName,game.league,game.season].filter(Boolean).join(' · ')}</div>
+                          <div style={{fontSize:11,color:'var(--muted)'}}>{[game.teamName,game.league,game.season,game.park].filter(Boolean).join(' · ')}</div>
                         </td>
                         <td style={{...tdS,textAlign:'left',fontWeight:500,color:'#1a202c'}}>
-                          {game.opponent||'—'}{game.park&&<div style={{fontSize:11,color:'var(--muted)'}}>{game.park}</div>}
+                          {game.opponent||'—'}
                         </td>
                         <td style={tdS}>{res?<span style={{background:res.color+'18',color:res.color,borderRadius:6,padding:'3px 8px',fontWeight:700,fontSize:12}}>{res.label} {game.myScore}–{game.oppScore}</span>:'—'}</td>
                         <td style={{...tdS,color:rd>0?'#276749':rd<0?'#c53030':'#a0aec0',fontWeight:600}}>{isNaN(rd)||rd===-999?'—':rd>0?`+${rd}`:rd}</td>
@@ -3545,7 +3551,11 @@ function TrendsPage({ uid }) {
   useEffect(() => { if (filtersLoaded) saveFilters(uid, 'trendsMetric', activeMetric); }, [activeMetric, filtersLoaded]);
 
   const filtered = applyFilters(games, filters);
-  const chronological = [...filtered].sort((a,b)=>a.date.localeCompare(b.date));
+  const chronological = [...filtered].sort((a,b)=>{
+    const dc=a.date.localeCompare(b.date);
+    if(dc!==0) return dc;
+    return (a.time||'').localeCompare(b.time||'');
+  });
 
   const dataPoints = chronological.map(game => {
     const abs=allABs[game.id]||[], s=calcGameStats(abs,inclFoulK);
