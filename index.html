@@ -3846,6 +3846,7 @@ function App() {
   const gameId = routeState.gameId;
   const [prevPage, setPrevPage] = useState('games');
   const [pendingNav, setPendingNav] = useState(null); // {newPage, gId} — blocked nav awaiting confirm
+  const suppressHashChange = React.useRef(false); // true while we're restoring the URL ourselves
 
   // doNavigate: actually performs the navigation without any dirty check
   const doNavigate = (newPage, gId) => {
@@ -3867,11 +3868,14 @@ function App() {
   // hashchange fires on browser back/forward — intercept if form is dirty
   useEffect(() => {
     const onHash = (e) => {
+      // Ignore hashchange events we triggered ourselves (URL restoration)
+      if (suppressHashChange.current) { suppressHashChange.current = false; return; }
       if (window.__dirtyForm) {
-        // Snap the URL back to where it was before the browser navigated
-        const oldHash = e.oldURL ? '#' + new URL(e.oldURL).hash.slice(1) : '#games';
-        window.location.replace(window.location.pathname + window.location.search + oldHash);
-        // Parse the destination the user was trying to reach
+        // Snap the URL back — flag first so our own replace doesn't re-trigger this handler
+        suppressHashChange.current = true;
+        const oldHash = e.oldURL ? new URL(e.oldURL).hash : '#games';
+        window.location.replace(window.location.pathname + window.location.search + (oldHash || '#games'));
+        // Show the modal pointing at where the user wanted to go
         const targetRaw = e.newURL ? new URL(e.newURL).hash.slice(1) : 'games';
         const target = targetRaw.startsWith('game/')
           ? { page: 'game-detail', gId: targetRaw.slice(5) }
