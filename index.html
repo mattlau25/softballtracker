@@ -349,6 +349,17 @@ const OTHER_OUTCOMES = ['Walk','Hit by Pitch','Sac Fly','Sac Bunt','Reach on Err
 
 const HIT_BASES = { 'Single':1, 'Double':2, 'Triple':3, 'Home Run':4 };
 
+// Outcomes that require trajectory
+const NEEDS_TRAJECTORY = new Set([
+  'Single','Double','Triple','Home Run',
+  'Ground Out','Fly Out','Line Out','Pop Out','Double Play',
+  'Sac Fly','Sac Bunt','Reach on Error',"Fielder's Choice"
+]);
+// Outcomes that require bases reached
+const NEEDS_BASES = new Set(['Reach on Error',"Fielder's Choice"]);
+// Outcomes where you actually reach base (bases reached field shown)
+const REACH_OUTCOMES = new Set(['Walk','Hit by Pitch','Reach on Error',"Fielder's Choice"]);
+
 // Outcomes where spray chart applies (excluding Foul Out — handled separately)
 const SPRAY_OUTCOMES = new Set([
   'Single','Double','Triple','Home Run',
@@ -412,6 +423,11 @@ function fmtTime(t) {
   return `${h12}:${String(m).padStart(2,'0')}${ampm}`;
 }
 function getResult(g) {
+  // Manual result override takes priority
+  if (g.result === 'W') return { label:'W', color:'#276749' };
+  if (g.result === 'L') return { label:'L', color:'#c53030' };
+  if (g.result === 'T') return { label:'T', color:'#b7791f' };
+  // Auto from scores
   const ms = parseInt(g.myScore), os = parseInt(g.oppScore);
   if (isNaN(ms) || isNaN(os)) return null;
   if (ms > os) return { label:'W', color:'#276749' };
@@ -957,7 +973,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
 function BatsPage({ uid }) {
   const [bats, setBats] = useState([]);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name:'', nickname:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', notes:'' });
+  const [form, setForm] = useState({ name:'', nickname:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', construction:'', notes:'' });
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [confirmDel, setConfirmDel] = useState(null);
@@ -965,7 +981,7 @@ function BatsPage({ uid }) {
   const load = () => batsCol(uid).orderBy('createdAt','desc').get().then(s => { setBats(s.docs.map(d => ({id:d.id,...d.data()}))); setLoading(false); });
   useEffect(() => { load(); }, [uid]);
   const upd = (k, v) => setForm(f => ({...f, [k]: v}));
-  const startNew = () => { setForm({ name:'', nickname:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', notes:'' }); setEditing('new'); };
+  const startNew = () => { setForm({ name:'', nickname:'', weight:'', barrelLength:'', balance:'', endloadWeight:'', construction:'', notes:'' }); setEditing('new'); };
   const startEdit = bat => { setForm({...bat}); setEditing(bat.id); };
   const save = async () => {
     const data = { ...form, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
@@ -1010,10 +1026,6 @@ function BatsPage({ uid }) {
             <label style={S.label}>Bat Name / Model *</label>
             <input style={S.input} value={form.name} onChange={e => upd('name', e.target.value)} placeholder="e.g. DeMarini CF Zen 26oz"/>
           </div>
-          <div style={{...S.formGroup, gridColumn:'1/-1'}}>
-            <label style={S.label}>Nickname *</label>
-            <input style={S.input} value={form.nickname||''} onChange={e => upd('nickname', e.target.value)} placeholder="e.g. The Beast"/>
-          </div>
           <div style={S.formGroup}>
             <label style={S.label}>Weight (oz)</label>
             <input type="number" step="0.1" style={S.input} value={form.weight} onChange={e => upd('weight', e.target.value)} placeholder="e.g. 26"/>
@@ -1028,6 +1040,14 @@ function BatsPage({ uid }) {
               <option value="">Select</option>
               <option value="Balanced">Balanced</option>
               <option value="Endload">Endload</option>
+            </select>
+          </div>
+          <div style={S.formGroup}>
+            <label style={S.label}>Construction</label>
+            <select style={S.select} value={form.construction||''} onChange={e => upd('construction', e.target.value)}>
+              <option value="">Select</option>
+              <option value="1-Piece">1-Piece</option>
+              <option value="2-Piece">2-Piece</option>
             </select>
           </div>
           <div style={S.formGroup}>
@@ -1059,12 +1079,11 @@ function BatsPage({ uid }) {
       <div style={{flex:1}}>
         <div style={S.listTitle}>
           {bat.name}
-          {bat.nickname && <span style={{color:'var(--muted)', fontWeight:400, fontSize:13, marginLeft:6}}>"{bat.nickname}"</span>}
           {bat.favourite && !archived && <span style={{...S.badge, fontSize:10, marginLeft:6, color:'#92400e', background:'#fef3c7', border:'1px solid #fde68a'}}>Favourite</span>}
           {archived && <span style={{...S.badge, fontSize:10, marginLeft:6}}>Archived</span>}
         </div>
         <div style={S.listSub}>
-          {[bat.weight && `${bat.weight} oz`, bat.barrelLength && `${bat.barrelLength}" barrel`, bat.balance, bat.endloadWeight && `${bat.endloadWeight} oz endload`].filter(Boolean).join(' · ')}
+          {[bat.weight && `${bat.weight} oz`, bat.barrelLength && `${bat.barrelLength}" barrel`, bat.balance, bat.construction, bat.endloadWeight && `${bat.endloadWeight} oz endload`].filter(Boolean).join(' · ')}
         </div>
         {bat.notes && <div style={{...S.hint, marginTop:3, fontStyle:'italic'}}>{bat.notes}</div>}
       </div>
@@ -1108,7 +1127,6 @@ function BatsPage({ uid }) {
 async function exportCSV(uid) {
   const gsnap = await gamesCol(uid).orderBy('date','desc').get();
   const games = gsnap.docs.map(d => ({id:d.id,...d.data()}));
-  games.sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
   const rows = [['Date','Day','Opponent','Park','Home/Away','Day/Night','My Score','Opp Score','Result','Team','League','Tier','Season','PA','AB','H','2B','3B','HR','R','RBI','BB','K','AVG','OBP','SLG','PO','A','E','AB#','Outcome','Sub-Outcome','Bases','RBI','Run','Bat','Position','Hit Direction','Spray X','Spray Y','AB Comments','Game Comments']];
   for (const g of games) {
     const absSnap = await absCol(uid, g.id).orderBy('timestamp','asc').get();
@@ -1257,12 +1275,18 @@ function GamesPage({ uid, setPage, setGameId, active }) {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
+  const [showComments, setShowComments] = useState(() => {
+    try { return localStorage.getItem('gamesShowComments') === 'true'; } catch { return false; }
+  });
+  const toggleShowComments = (val) => {
+    setShowComments(val);
+    try { localStorage.setItem('gamesShowComments', val ? 'true' : 'false'); } catch {}
+  };
 
   const loadAll = async () => {
     setLoading(true);
     const snap = await gamesCol(uid).orderBy('date','desc').get();
     const gdata = snap.docs.map(d => ({id:d.id,...d.data()}));
-    gdata.sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
     setGames(gdata);
     const abResults = await Promise.all(gdata.map(g => absCol(uid,g.id).orderBy('timestamp','asc').get()));
     const absMap = {};
@@ -1299,7 +1323,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
 
   const streak = (() => {
     if (!games.length) return null;
-    const sorted = [...games].sort((a,b) => { const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
+    const sorted = [...games].sort((a,b) => b.date.localeCompare(a.date));
     let hitStreak = 0;
     for (const g of sorted) {
       const abs = allABs[g.id] || [];
@@ -1345,6 +1369,10 @@ function GamesPage({ uid, setPage, setGameId, active }) {
           <svg style={{position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', opacity:0.4}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           {search && <button onClick={()=>setSearch('')} style={{position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:14}}>✕</button>}
         </div>
+        <label style={{display:'flex', alignItems:'center', gap:8, fontSize:13, color:'var(--muted)', marginBottom:10, cursor:'pointer', userSelect:'none'}}>
+          <input type="checkbox" checked={showComments} onChange={e => toggleShowComments(e.target.checked)} style={{cursor:'pointer'}}/>
+          Show comments
+        </label>
 
 
 
@@ -1376,6 +1404,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                   </div>
                   {g.season && <div style={{...S.listSub, marginTop:2}}>{g.season}</div>}
                   {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}</div>}
+                  {showComments && g.comments && <div style={{fontSize:12, color:'var(--muted)', marginTop:4, fontStyle:'italic', whiteSpace:'pre-wrap'}}>{g.comments}</div>}
                 </div>
                 <span style={{color:'var(--muted)', fontSize:16, flexShrink:0}}>›</span>
               </a>
@@ -1545,7 +1574,7 @@ function BatDropdown({ bats, value, onChange }) {
       style={{padding:'10px 14px', cursor:'pointer', background: value===bat.id ? 'var(--border2)' : 'transparent', borderBottom:'1px solid var(--border2)'}}
       onMouseEnter={e => e.currentTarget.style.background='var(--border2)'}
       onMouseLeave={e => e.currentTarget.style.background = value===bat.id ? 'var(--border2)' : 'transparent'}>
-      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>{bat.nickname || bat.name}{bat.nickname && <span style={{color:'var(--muted)', fontWeight:400, fontSize:12, marginLeft:4}}>({bat.name})</span>}</div>
+      <div style={{fontSize:14, color:'var(--text)', fontWeight: bat.favourite ? 600 : 400}}>{bat.name}</div>
       {batSubline(bat) && <div style={{fontSize:12, color:'var(--muted)', marginTop:2}}>{batSubline(bat)}</div>}
     </div>
   );
@@ -1557,7 +1586,7 @@ function BatDropdown({ bats, value, onChange }) {
         <div>
           {selected ? (
             <>
-              <div style={{fontSize:14, color:'var(--text)', fontWeight: selected.favourite ? 600 : 400}}>{selected.nickname || selected.name}{selected.nickname && <span style={{color:'var(--muted)', fontWeight:400, fontSize:12, marginLeft:4}}>({selected.name})</span>}</div>
+              <div style={{fontSize:14, color:'var(--text)', fontWeight: selected.favourite ? 600 : 400}}>{selected.name}</div>
               {batSubline(selected) && <div style={{fontSize:12, color:'var(--muted)'}}>{batSubline(selected)}</div>}
             </>
           ) : <span style={{color:'var(--muted)'}}>— Select bat —</span>}
@@ -1604,7 +1633,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
   const [dirty, setDirty] = useState(false);
   const [toast, setToast] = useState(null);
-  const upd = (k, v) => { setF(x => ({...x, [k]: v})); setDirty(true); };
+  const upd = (k, v) => { setF(x => ({...x, [k]: v})); setDirty(true); window.__dirtyForm = true; };
 
   const outcomeGroup = HIT_OUTCOMES.includes(f.outcome) ? 'hit' : OUT_OUTCOMES.includes(f.outcome) ? 'out' : OTHER_OUTCOMES.includes(f.outcome) ? 'other' : '';
   const isFoulOut = f.outcome === 'Foul Out';
@@ -1626,10 +1655,19 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     if (dirty && !isEdit) {
       if (!window.confirm('You have unsaved changes. Discard this at bat?')) return;
     }
+    window.__dirtyForm = false;
     onCancel();
   };
 
+  const needsTraj = NEEDS_TRAJECTORY.has(f.outcome) && !(isFoulOut);
+  const needsBases = NEEDS_BASES.has(f.outcome);
+  const [validErr, setValidErr] = useState(null);
+
   const save = async () => {
+    // Validation
+    if (needsTraj && !f.trajectory) { setValidErr('Please select a Trajectory.'); return; }
+    if (needsBases && !f.bases) { setValidErr('Please enter Bases Reached.'); return; }
+    setValidErr(null);
     const bat = bats.find(b => b.id === f.batId);
     const bases = autoBase || f.bases || 0;
     const data = {
@@ -1639,16 +1677,15 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
       countAsHit: COUNTS_AS_HIT.has(f.outcome),
     };
     if (isEdit) {
-      // Don't touch timestamp on edit — preserves ordering
       await absCol(uid, gameId).doc(ab.id).update(data);
     } else {
       data.timestamp = firebase.firestore.FieldValue.serverTimestamp();
       await absCol(uid, gameId).add(data);
     }
     haptic('success');
-    const toastMsg = f.outcome + (f.rbi > 0 ? `, ${f.rbi} RBI` : '');
-    setToast(toastMsg);
-    setTimeout(() => { setToast(null); onSave(); }, 1800);
+    window.__dirtyForm = false;
+    setToast('saved');
+    setTimeout(() => { setToast(null); onSave(); }, 900);
   };
 
   // Outcome tile colours
@@ -1684,8 +1721,9 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
 
   if (toast) return (
     <div style={{...S.card, border:'1px solid var(--success)', background:'rgba(39,103,73,0.08)', textAlign:'center', padding:'24px 16px'}}>
-      <div style={{fontSize:13, color:'var(--muted)', marginBottom:4}}>Saved</div>
-      <div style={{fontSize:18, fontWeight:700, color:'var(--success)'}}>{toast}</div>
+      <div style={{fontSize:42, color:'var(--success)'}}>
+        <i className="fa-solid fa-circle-check"></i>
+      </div>
     </div>
   );
 
@@ -1693,8 +1731,12 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     <div>
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14, paddingTop:4}}>
         <div style={S.cardTitle}>{isEdit ? 'Edit At Bat' : 'Record At Bat'}</div>
-        {isEdit && <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>}
+        <div style={{display:'flex', gap:8}}>
+          <button onClick={handleCancel} style={S.btnSecondary}>Cancel</button>
+          <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)} style={S.btnPrimary}>{isEdit ? 'Save Changes' : 'Record AB'}</button>
+        </div>
       </div>
+      {validErr && <div style={{color:'var(--danger)', fontSize:13, marginBottom:10, padding:'8px 12px', background:'rgba(192,57,43,0.08)', borderRadius:8}}>{validErr}</div>}
 
       {/* Bat */}
       <div style={{...S.formGroup, marginBottom:16}}>
@@ -1832,22 +1874,24 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [fieldingDragIdx, setFieldingDragIdx] = useState(null);
   const [fieldingDragOverIdx, setFieldingDragOverIdx] = useState(null);
   const [abCollapsed, setAbCollapsed] = useState(false);
-  const [abFormFromCollapsed, setAbFormFromCollapsed] = useState(false);
   const [sprayCollapsed, setSprayCollapsed] = useState(false);
   const [fieldingCollapsed, setFieldingCollapsed] = useState(false);
-  const [fieldingFormFromCollapsed, setFieldingFormFromCollapsed] = useState(false);
   const [showFieldingForm, setShowFieldingForm] = useState(false);
   const [fieldingEntries, setFieldingEntries] = useState([]);
-  const [fieldingForm, setFieldingForm] = useState({ inning:'', position:'', putouts:0, assists:0, errors:0, notes:'' });
+  const [fieldingForm, setFieldingForm] = useState({ inning:'', position:'', putouts:0, assists:0, fe:0, te:0, notes:'' });
   const [editFieldingId, setEditFieldingId] = useState(null);
 
   const fieldingCol = () => gamesCol(uid).doc(gameId).collection('fielding');
+
+  const [fieldingToast, setFieldingToast] = useState(false);
 
   const loadFielding = () => fieldingCol().orderBy('createdAt','asc').get()
     .then(s => setFieldingEntries(s.docs.map(d=>({id:d.id,...d.data()}))));
 
   const saveFielding = async () => {
     const data = { ...fieldingForm, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    // Migrate: if old 'errors' field exists but fe/te don't, move to fe
+    if (data.errors !== undefined && data.fe === undefined) { data.fe = data.errors; data.te = 0; delete data.errors; }
     if (editFieldingId) {
       await fieldingCol().doc(editFieldingId).update(data);
     } else {
@@ -1856,8 +1900,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
     }
     setShowFieldingForm(false);
     setEditFieldingId(null);
-    setFieldingForm({ inning:'', position:'', putouts:0, assists:0, errors:0, notes:'' });
+    setFieldingForm({ inning:'', position:'', putouts:0, assists:0, fe:0, te:0, notes:'' });
+    window.__dirtyForm = false;
     loadFielding();
+    setFieldingToast(true);
+    setTimeout(() => setFieldingToast(false), 900);
   };
 
   const deleteFielding = async id => {
@@ -1865,7 +1912,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   };
 
   const startEditFielding = entry => {
-    setFieldingForm({ inning: entry.inning||'', position: entry.position||'', putouts: entry.putouts||0, assists: entry.assists||0, errors: entry.errors||0, notes: entry.notes||'' });
+    setFieldingForm({ inning: entry.inning||'', position: entry.position||'', putouts: entry.putouts||0, assists: entry.assists||0, fe: entry.fe !== undefined ? entry.fe : (entry.errors||0), te: entry.te||0, notes: entry.notes||'' });
     setEditFieldingId(entry.id);
     setShowFieldingForm(true);
   };
@@ -1898,15 +1945,32 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
     setPage('games');
   };
 
+  const [gameFormError, setGameFormError] = useState(null);
+
   const saveGame = async () => {
+    // Validate W/L/T vs scores
+    const ms = parseInt(gameForm.myScore), os = parseInt(gameForm.oppScore);
+    const hasScores = !isNaN(ms) && !isNaN(os) && gameForm.myScore !== '' && gameForm.oppScore !== '';
+    if (hasScores && gameForm.result) {
+      const conflict =
+        (gameForm.result === 'W' && ms <= os) ||
+        (gameForm.result === 'L' && ms >= os) ||
+        (gameForm.result === 'T' && ms !== os);
+      if (conflict) {
+        setGameFormError(`Result "${gameForm.result === 'W' ? 'Win' : gameForm.result === 'L' ? 'Loss' : 'Tie'}" conflicts with the score ${ms}–${os}.`);
+        return;
+      }
+    }
+    setGameFormError(null);
     setSavingGame(true);
     await gamesCol(uid).doc(gameId).update({...gameForm, dayOfWeek: getDayOfWeek(gameForm.date)});
+    window.__dirtyForm = false;
     setSavingGame(false);
     setEditingGame(false);
     loadGame();
   };
 
-  const updGame = (k,v) => setGameForm(f=>({...f,[k]:v}));
+  const updGame = (k,v) => { setGameForm(f=>({...f,[k]:v})); window.__dirtyForm = true; };
 
   const stats = calcGameStats(abs, profile.includeKFoulInK);
   const res = game ? getResult(game) : null;
@@ -1943,8 +2007,12 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         <div style={S.card}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
             <div style={S.cardTitle}>Edit Game Info</div>
-            <button onClick={()=>setEditingGame(false)} style={S.btnSmall}>Cancel</button>
+            <div style={{display:'flex', gap:8}}>
+              <button onClick={()=>{setEditingGame(false); setGameFormError(null); window.__dirtyForm = false;}} style={S.btnSmall}>Cancel</button>
+              <button onClick={saveGame} disabled={savingGame} style={S.btnPrimary}>{savingGame?'Saving...':'Save Changes'}</button>
+            </div>
           </div>
+          {gameFormError && <div style={{color:'var(--danger)', fontSize:13, marginBottom:12, padding:'8px 12px', background:'rgba(192,57,43,0.08)', borderRadius:8}}>{gameFormError}</div>}
           <div style={S.formGrid2} className="form-grid-2">
             <div style={S.formGroup}>
               <label style={S.label}>Date *</label>
@@ -1984,6 +2052,16 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               <input type="number" min="0" style={S.input} value={gameForm.oppScore||''} onChange={e=>updGame('oppScore',e.target.value)}/>
             </div>
             <div style={{...S.formGroup, gridColumn:'1/-1'}}>
+              <label style={S.label}>Result</label>
+              <select style={S.select} value={gameForm.result||''} onChange={e=>updGame('result',e.target.value)}>
+                <option value="">— Auto from scores —</option>
+                <option value="W">Win</option>
+                <option value="L">Loss</option>
+                <option value="T">Tie</option>
+              </select>
+              <span style={S.hint}>Leave blank to auto-calculate from scores.</span>
+            </div>
+            <div style={{...S.formGroup, gridColumn:'1/-1'}}>
               <label style={S.label}>Season Name</label>
               <input style={S.input} value={gameForm.season||''} onChange={e=>updGame('season',e.target.value)}/>
             </div>
@@ -2005,7 +2083,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             </div>
           </div>
           <div style={{display:'flex', gap:10, marginTop:14, justifyContent:'flex-end'}}>
-            <button onClick={()=>setEditingGame(false)} style={S.btnSecondary}>Cancel</button>
+            <button onClick={()=>{setEditingGame(false); setGameFormError(null); window.__dirtyForm = false;}} style={S.btnSecondary}>Cancel</button>
             <button onClick={saveGame} disabled={savingGame} style={S.btnPrimary}>{savingGame?'Saving...':'Save Changes'}</button>
           </div>
         </div>
@@ -2038,7 +2116,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               {game.season && <span style={{color:'var(--label)'}}>{game.season}</span>}
             </div>
           )}
-          {game.comments && <p style={{...S.muted, marginTop:12, fontStyle:'italic', borderTop:'1px solid var(--border)', paddingTop:10}}>{game.comments}</p>}
+          {game.comments && <p style={{...S.muted, marginTop:12, fontStyle:'italic', borderTop:'1px solid var(--border)', paddingTop:10, whiteSpace:'pre-wrap'}}>{game.comments}</p>}
         </div>
       )}
 
@@ -2083,14 +2161,13 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── At Bats ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
+          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
             if (abCollapsed && !showForm) { setAbCollapsed(false); }
-            else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); setReorderMode(false); }
-            else { setAbCollapsed(c=>!c); setReorderMode(false); }
+            else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
+            else { setAbCollapsed(c=>!c); }
           }}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
-            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, position:'relative', bottom:1}}></i>
+            At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showForm && !editId && !abCollapsed && abs.length > 1 && (
@@ -2101,21 +2178,23 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               onClick={e => {
                 e.stopPropagation();
                 if (abCollapsed) {
-                  setAbFormFromCollapsed(true);
                   setAbCollapsed(false);
                   setReorderMode(false);
                   setShowForm(true);
                 } else if (showForm) {
                   setShowForm(false);
-                  if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
+                  setAbCollapsed(true);
                 } else {
-                  setAbFormFromCollapsed(false);
                   setReorderMode(false);
                   setShowForm(true);
                 }
               }}>
               {(!abCollapsed && showForm) ? 'Cancel' : '+ Record AB'}
             </button>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
+              if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
+              else { setAbCollapsed(c=>!c); }
+            }}></i>
           </div>
         </div>
 
@@ -2126,7 +2205,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 <ABForm uid={uid} gameId={gameId} bats={bats}
                   defaultPosition={profile.primaryPosition||''}
                   onSave={() => { setShowForm(false); loadABs(); }}
-                  onCancel={() => { setShowForm(false); if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); } }}/>
+                  onCancel={() => setShowForm(false)}/>
               </div>
             )}
             {loading && <p style={S.muted}>Loading...</p>}
@@ -2143,7 +2222,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 </div>
               );
               const label = ab.outcome + (ab.outcome === 'Foul Out' ? (ab.subOutcome === 'caught' ? ' (caught)' : ab.subOutcome === 'strikeout' ? ' (K)' : '') : '');
-              const dir = ab.spray && COUNTS_AS_HIT.has(ab.outcome) ? getHitDirection(ab.spray, handedness) : null;
+              const dir = ab.spray ? getHitDirection(ab.spray, handedness) : null;
               const moveAB = async (fromIdx, toIdx) => {
                 if (toIdx < 0 || toIdx >= abs.length) return;
                 const a = abs[fromIdx], b = abs[toIdx];
@@ -2180,59 +2259,17 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     <div style={{color:'var(--muted)', fontSize:12, fontWeight:500, minWidth:24, textAlign:'center'}}>#{i+1}</div>
                   </div>
                   <div style={{flex:1, minWidth:0}}>
-                    {/* Row 1: abbrev pill + outcome name + tags */}
-                    <div style={{display:'flex', alignItems:'center', gap:5, flexWrap:'wrap'}}>
-                      {/* Coloured abbreviation pill — light pastel matching the form tiles */}
-                      {(() => {
-                        const CARD_ABBREVS = {'Single':'1B','Double':'2B','Triple':'3B','Home Run':'HR','Strikeout':'K','Ground Out':'GO','Fly Out':'FO','Line Out':'LO','Pop Out':'PO','Foul Out':'FOK','Double Play':'DP','Walk':'BB','Hit by Pitch':'HBP','Sac Fly':'SF','Sac Bunt':'SH','Reach on Error':'E',"Fielder's Choice":'FC'};
-                        const abbr = CARD_ABBREVS[ab.outcome];
-                        const isHit = COUNTS_AS_HIT.has(ab.outcome);
-                        const isOut = OUT_OUTCOMES.includes(ab.outcome);
-                        // Match the pastel tile colours from the form
-                        const pillBg = isHit ? '#c8eee0' : isOut ? '#fad0cc' : '#cde0f8';
-                        const pillColor = isHit ? '#1a7a5a' : isOut ? '#c0392b' : '#2e6db4';
-                        const pillBorder = isHit ? '#2d8f6f' : isOut ? '#c0392b' : '#2e6db4';
-                        if (!abbr) return null;
-                        return <span style={{background:pillBg, color:pillColor, border:`1.5px solid ${pillBorder}`, borderRadius:6, padding:'2px 7px', fontSize:12, fontWeight:700, letterSpacing:'0.02em', flexShrink:0}}>{abbr}</span>;
-                      })()}
+                    <div style={{display:'flex', alignItems:'center', gap:6, flexWrap:'wrap'}}>
                       <span style={{fontWeight:600, color, fontSize:13}}>{label}</span>
-                      {ab.rbi > 0 && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{ab.rbi} RBI</span>}
-                      {ab.runScored && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>R</span>}
-                      {ab.trajectory && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{ab.trajectory}</span>}
-                      {dir && <span style={{...S.badge, color:'var(--muted)', fontSize:11}}>{dir}</span>}
+                      {ab.rbi > 0 && <span style={S.badge}>{ab.rbi} RBI</span>}
+                      {ab.runScored && <span style={S.badge}>R</span>}
+                      {dir && <span style={{...S.badge, color:'var(--primary)'}}>{dir}</span>}
                     </div>
-                    {/* Row 2: bat + comments — hidden on mobile */}
-                    <div className="ab-card-sub" style={{...S.listSub, marginTop:6}}>
-                      {(() => {
-                        const liveBat = bats.find(b => b.id === ab.batId);
-                        const displayName = liveBat?.nickname || liveBat?.name || ab.batNickname || ab.batName;
-                        return [displayName, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ');
-                      })()}
+                    <div style={S.listSub}>
+                      {[ab.batName, ab.position, (ab.putouts>0||ab.assists>0||ab.errors>0) && `${ab.putouts}PO ${ab.assists}A ${ab.errors}E`].filter(Boolean).join(' · ')}
                     </div>
-                    {ab.comments && <div className="ab-card-sub" style={{...S.hint, marginTop:2, fontStyle:'italic'}}>{ab.comments}</div>}
+                    {ab.comments && <div style={{...S.hint, marginTop:3, fontStyle:'italic'}}>{ab.comments}</div>}
                   </div>
-                  {/* Mini spray diagram */}
-                  {!reorderMode && ab.spray && (() => {
-                    const W = ab.spray.w || 320, H = ab.spray.h || 281;
-                    const fracX = ab.spray.x / W;
-                    const fracY = ab.spray.y / H;
-                    const SIZE = 44;
-                    const dotX = fracX * SIZE;
-                    const dotY = fracY * SIZE;
-                    const isHR = ab.outcome === 'Home Run';
-                    const isHitDot = COUNTS_AS_HIT.has(ab.outcome);
-                    const isOutDot = OUT_OUTCOMES.includes(ab.outcome);
-                    const dotColor = isHR ? '#d4782a' : isHitDot ? '#1a7a5a' : isOutDot ? '#c0392b' : '#2e6db4';
-                    return (
-                      <div style={{position:'relative', width:SIZE, height:SIZE, flexShrink:0, marginLeft:8, marginRight:10}}>
-                        <img src={DIAMOND_URL} alt="" style={{width:SIZE, height:SIZE, display:'block', borderRadius:4, opacity:0.85}}/>
-                        <svg style={{position:'absolute', top:0, left:0, overflow:'visible'}} width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-                          <line x1={SIZE*0.5} y1={SIZE*0.877} x2={dotX} y2={dotY} stroke={dotColor} strokeWidth="1" strokeOpacity="0.5"/>
-                          <circle cx={dotX} cy={dotY} r="3" fill={dotColor} fillOpacity="0.9"/>
-                        </svg>
-                      </div>
-                    );
-                  })()}
                   <div style={{display:'flex', gap:6, flexShrink:0}}>
                     {!reorderMode && <button onClick={() => setEditId(ab.id)} style={S.btnSmall}>Edit</button>}
                     {!reorderMode && <button onClick={() => setConfirmAB(ab.id)} style={S.btnDanger}>Del</button>}
@@ -2248,10 +2285,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Spray Chart ── */}
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
-            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
-            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, position:'relative', bottom:1}}></i>
+          <div style={{...S.sectionTitle, marginBottom:0}}>
+            Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}
           </div>
+          <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
         </div>
         {!sprayCollapsed && (
           <div style={{display:'flex', alignItems:'center', gap:8, paddingTop:10, flexWrap:'wrap'}}>
@@ -2298,18 +2335,17 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             )}
           </div>
         )}
-        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}</div>}
+        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'} mapped</div>}
       </div>
 
       {/* ── Fielding ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
-            if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false); }
-            else { setFieldingCollapsed(c=>!c); setFieldingReorderMode(false); }
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
+          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
+            if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
+            else { setFieldingCollapsed(c=>!c); }
           }}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
-            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, position:'relative', bottom:1}}></i>
+            Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showFieldingForm && !fieldingCollapsed && fieldingEntries.length > 1 && (
@@ -2320,35 +2356,49 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               onClick={e => {
                 e.stopPropagation();
                 if (fieldingCollapsed) {
-                  setFieldingFormFromCollapsed(true);
                   setFieldingCollapsed(false);
                   setShowFieldingForm(true);
                   setEditFieldingId(null);
-                  setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''});
+                  setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,fe:0,te:0,notes:''});
                 } else if (showFieldingForm) {
                   setShowFieldingForm(false);
                   setEditFieldingId(null);
-                  if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }
+                  setFieldingCollapsed(true);
                 } else {
-                  setFieldingFormFromCollapsed(false);
                   setShowFieldingForm(true);
                   setEditFieldingId(null);
-                  setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,errors:0,notes:''});
+                  setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,fe:0,te:0,notes:''});
                 }
               }}>
               {(!fieldingCollapsed && showFieldingForm) ? 'Cancel' : '+ Record Fielding'}
             </button>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
+              if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
+              else { setFieldingCollapsed(c=>!c); }
+            }}></i>
           </div>
         </div>
 
         {!fieldingCollapsed && (
           <div style={{paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
+            {fieldingToast && (
+              <div style={{...S.card, border:'1px solid var(--success)', background:'rgba(39,103,73,0.08)', textAlign:'center', padding:'20px 16px'}}>
+                <div style={{fontSize:40, color:'var(--success)'}}><i className="fa-solid fa-circle-check"></i></div>
+              </div>
+            )}
             {showFieldingForm && (
               <div style={S.card}>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
+                  <div style={S.cardTitle}>{editFieldingId ? 'Edit Fielding' : 'Record Fielding'}</div>
+                  <div style={{display:'flex', gap:8}}>
+                    <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null);window.__dirtyForm=false; if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }}} style={S.btnSecondary}>Cancel</button>
+                    <button onClick={saveFielding} disabled={!fieldingForm.position} style={S.btnPrimary}>{editFieldingId ? 'Save Changes' : 'Save Fielding'}</button>
+                  </div>
+                </div>
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14}}>
                   <div style={S.formGroup}>
                     <label style={S.label}>Inning</label>
-                    <select style={S.select} value={fieldingForm.inning} onChange={e=>setFieldingForm(f=>({...f,inning:e.target.value}))}>
+                    <select style={S.select} value={fieldingForm.inning} onChange={e=>{setFieldingForm(f=>({...f,inning:e.target.value}));window.__dirtyForm=true;}}>
                       <option value="">—</option>
                       {['1','2','3','4','5','6','7','8','9','10','11','12','Extra'].map(n=>(
                         <option key={n} value={n}>{n}</option>
@@ -2357,7 +2407,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                   </div>
                   <div style={S.formGroup}>
                     <label style={S.label}>Position *</label>
-                    <select style={S.select} value={fieldingForm.position} onChange={e=>setFieldingForm(f=>({...f,position:e.target.value}))}>
+                    <select style={S.select} value={fieldingForm.position} onChange={e=>{setFieldingForm(f=>({...f,position:e.target.value}));window.__dirtyForm=true;}}>
                       <option value="">— Select —</option>
                       {['P','C','1B','2B','3B','SS','LF','LCF','CF','RCF','RF','DH','EH','UTIL'].map(p=>(
                         <option key={p} value={p}>{p}</option>
@@ -2365,18 +2415,18 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     </select>
                   </div>
                 </div>
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:14}}>
-                  {[['putouts','Putouts'],['assists','Assists'],['errors','Errors']].map(([key,lbl])=>(
+                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10, marginBottom:14}}>
+                  {[['putouts','PO'],['assists','A'],['fe','FE'],['te','TE']].map(([key,lbl])=>(
                     <div key={key}>
-                      <label style={{...S.label, display:'block', marginBottom:6}}>{lbl}</label>
-                      <div style={{display:'flex', alignItems:'center', gap:8}}>
-                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:Math.max(0,f[key]-1)}))}
-                          style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <label style={{...S.label, display:'block', marginBottom:6}}>{lbl}{key==='fe'?' (Field)':key==='te'?' (Throw)':''}</label>
+                      <div style={{display:'flex', alignItems:'center', gap:6}}>
+                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:Math.max(0,(f[key]||0)-1)}))}
+                          style={{width:30,height:30,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                           <i className="fa-solid fa-minus" style={{fontSize:10,color:'var(--text)'}}></i>
                         </button>
-                        <span style={{fontSize:18,fontWeight:700,minWidth:20,textAlign:'center',color:'var(--text)'}}>{fieldingForm[key]}</span>
-                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:f[key]+1}))}
-                          style={{width:32,height:32,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <span style={{fontSize:17,fontWeight:700,minWidth:18,textAlign:'center',color:(key==='fe'||key==='te')&&(fieldingForm[key]||0)>0?'#c53030':'var(--text)'}}>{fieldingForm[key]||0}</span>
+                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:(f[key]||0)+1}))}
+                          style={{width:30,height:30,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                           <i className="fa-solid fa-plus" style={{fontSize:10,color:'var(--text)'}}></i>
                         </button>
                       </div>
@@ -2386,11 +2436,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 <div style={{...S.formGroup, marginBottom:14}}>
                   <label style={S.label}>Notes</label>
                   <textarea style={{...S.input, height:55, resize:'vertical'}} value={fieldingForm.notes}
-                    onChange={e=>setFieldingForm(f=>({...f,notes:e.target.value}))}
+                    onChange={e=>{setFieldingForm(f=>({...f,notes:e.target.value}));window.__dirtyForm=true;}}
                     placeholder="e.g. Made a diving stop at 3B..."/>
                 </div>
                 <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
-                  <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null); if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }}} style={S.btnSecondary}>Cancel</button>
+                  <button onClick={()=>{setShowFieldingForm(false);setEditFieldingId(null);window.__dirtyForm=false; if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }}} style={S.btnSecondary}>Cancel</button>
                   <button onClick={saveFielding} disabled={!fieldingForm.position} style={S.btnPrimary}>
                     {editFieldingId ? 'Save Changes' : 'Save Fielding'}
                   </button>
@@ -2440,7 +2490,15 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                       <div style={{display:'flex', gap:12, fontSize:13, color:'var(--text)'}}>
                         <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>PO </span><strong>{entry.putouts||0}</strong></span>
                         <span><span style={{color:'var(--muted)', fontSize:11, fontWeight:600}}>A </span><strong>{entry.assists||0}</strong></span>
-                        <span><span style={{color:entry.errors>0?'#c53030':'var(--muted)', fontSize:11, fontWeight:600}}>E </span><strong style={{color:entry.errors>0?'#c53030':'var(--text)'}}>{entry.errors||0}</strong></span>
+                        {(() => {
+                          const fe = entry.fe !== undefined ? entry.fe : (entry.errors||0);
+                          const te = entry.te||0;
+                          const hasErr = fe > 0 || te > 0;
+                          return <>
+                            <span><span style={{color:fe>0?'#c53030':'var(--muted)', fontSize:11, fontWeight:600}}>FE </span><strong style={{color:fe>0?'#c53030':'var(--text)'}}>{fe}</strong></span>
+                            <span><span style={{color:te>0?'#c53030':'var(--muted)', fontSize:11, fontWeight:600}}>TE </span><strong style={{color:te>0?'#c53030':'var(--text)'}}>{te}</strong></span>
+                          </>;
+                        })()}
                       </div>
                     </div>
                     <div style={{display:'flex', gap:6}}>
@@ -2704,7 +2762,7 @@ function applyFilters(games, f) {
     return true;
   });
   if (f.lastN && parseInt(f.lastN)>0)
-    out = [...out].sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); }).slice(0,parseInt(f.lastN));
+    out = [...out].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,parseInt(f.lastN));
   return out;
 }
 
@@ -2967,7 +3025,7 @@ function StatsPage({ uid }) {
     let bestH=0, bestHDate='', bestRBI=0, bestRBIDate='', bestHR=0, bestHRDate='';
     let bestAVG=0, bestAVGDate='', bestAVGLabel='';
     let hitStreak=0, curStreak=0, streakEnd='';
-    const sorted=[...games].sort((a,b)=>{ const da=(a.date+(a.time||'00:00')); const db=(b.date+(b.time||'00:00')); return db.localeCompare(da); });
+    const sorted=[...games].sort((a,b)=>b.date.localeCompare(a.date));
     let activeStreak=0;
     for (const g of sorted) {
       const abs=allABs[g.id]||[], s=calcGameStats(abs,inclFoulK);
@@ -3702,12 +3760,17 @@ function App() {
   }, []);
 
   const navigate = (newPage, gId = null) => {
+    // Check for unsaved changes
+    if (window.__dirtyForm) {
+      if (!window.confirm('You have unsaved changes. Discard and leave this page?')) return;
+      window.__dirtyForm = false;
+    }
     if (newPage === 'game-detail') {
       setPrevPage(page === 'new-game' ? 'games' : page);
     }
     const resolvedGameId = gId !== null ? gId : gameId;
     const newHash = pageToPath(newPage, resolvedGameId);
-    window.location.hash = newHash.slice(1); // strip the leading #
+    window.location.hash = newHash.slice(1);
     setRouteState({ page: newPage, gameId: resolvedGameId });
   };
 
