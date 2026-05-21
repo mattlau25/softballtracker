@@ -2224,7 +2224,6 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               <div style={{...S.empty, padding:'28px 0'}}><p>No at bats recorded yet.</p></div>
             )}
             {!loading && abs.length > 0 && abs.map((ab, i) => {
-              const color = abOutcomeColor(ab);
               if (editId === ab.id) return (
                 <div key={ab.id} style={S.card}>
                   <ABForm uid={uid} gameId={gameId} bats={bats} ab={ab}
