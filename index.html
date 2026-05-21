@@ -1369,10 +1369,12 @@ function GamesPage({ uid, setPage, setGameId, active }) {
           <svg style={{position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', opacity:0.4}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           {search && <button onClick={()=>setSearch('')} style={{position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:14}}>✕</button>}
         </div>
-        <label style={{display:'flex', alignItems:'center', gap:8, fontSize:13, color:'var(--muted)', marginBottom:10, cursor:'pointer', userSelect:'none'}}>
-          <input type="checkbox" checked={showComments} onChange={e => toggleShowComments(e.target.checked)} style={{cursor:'pointer'}}/>
-          Show comments
-        </label>
+        <div style={{display:'flex', justifyContent:'flex-end', marginBottom:10}}>
+          <label style={{display:'flex', alignItems:'center', gap:8, fontSize:13, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
+            <input type="checkbox" checked={showComments} onChange={e => toggleShowComments(e.target.checked)} style={{cursor:'pointer'}}/>
+            Show comments
+          </label>
+        </div>
 
 
 
@@ -1404,7 +1406,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                   </div>
                   {g.season && <div style={{...S.listSub, marginTop:2}}>{g.season}</div>}
                   {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}</div>}
-                  {showComments && g.comments && <div style={{fontSize:12, color:'var(--muted)', marginTop:4, fontStyle:'italic', whiteSpace:'pre-wrap'}}>{g.comments}</div>}
+                  {showComments && g.comments && <div style={{fontSize:12, color:'var(--muted)', marginTop:6, fontStyle:'italic', whiteSpace:'pre-wrap', borderTop:'1px solid var(--border)', paddingTop:6}}>{g.comments}</div>}
                 </div>
                 <span style={{color:'var(--muted)', fontSize:16, flexShrink:0}}>›</span>
               </a>
@@ -1633,6 +1635,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
   const [dirty, setDirty] = useState(false);
   const [toast, setToast] = useState(null);
+  const [validErr, setValidErr] = useState(null);
   const upd = (k, v) => { setF(x => ({...x, [k]: v})); setDirty(true); window.__dirtyForm = true; };
 
   const outcomeGroup = HIT_OUTCOMES.includes(f.outcome) ? 'hit' : OUT_OUTCOMES.includes(f.outcome) ? 'out' : OTHER_OUTCOMES.includes(f.outcome) ? 'other' : '';
@@ -1661,7 +1664,6 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
 
   const needsTraj = NEEDS_TRAJECTORY.has(f.outcome) && !(isFoulOut);
   const needsBases = NEEDS_BASES.has(f.outcome);
-  const [validErr, setValidErr] = useState(null);
 
   const save = async () => {
     // Validation
@@ -1721,7 +1723,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
 
   if (toast) return (
     <div style={{...S.card, border:'1px solid var(--success)', background:'rgba(39,103,73,0.08)', textAlign:'center', padding:'24px 16px'}}>
-      <div style={{fontSize:42, color:'var(--success)'}}>
+      <div style={{fontSize:48, color:'#1a7a4a'}}>
         <i className="fa-solid fa-circle-check"></i>
       </div>
     </div>
@@ -1782,7 +1784,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
       {/* Bases for ROE / FC */}
       {showBases && (
         <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={S.label}>Bases Reached</label>
+          <label style={S.label}>Bases Reached{needsBases ? ' *' : ''}</label>
           <div style={S.outBtns}>{[1,2,3].map(n => <button key={n} style={{...S.outBtn, ...(f.bases===n?S.outBtnHit:{})}} onClick={() => upd('bases',n)}>{n}B</button>)}</div>
         </div>
       )}
@@ -1791,7 +1793,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
       {/* Trajectory */}
       {f.outcome && (
         <div style={{...S.formGroup, marginBottom:16}}>
-          <label style={{...S.label, display:'block', marginBottom:8}}>Trajectory</label>
+          <label style={{...S.label, display:'block', marginBottom:8}}>Trajectory{needsTraj ? ' *' : ''}</label>
           <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
             {TRAJECTORIES.map(t => (
               <button key={t} onClick={() => upd('trajectory', f.trajectory===t ? '' : t)}
@@ -2161,13 +2163,17 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── At Bats ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
-            if (abCollapsed && !showForm) { setAbCollapsed(false); }
-            else if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
-            else { setAbCollapsed(c=>!c); }
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
+            if (abCollapsed) { setAbCollapsed(false); return; }
+            if (showForm && window.__dirtyForm) {
+              if (!window.confirm('You have unsaved changes. Discard and collapse?')) return;
+              window.__dirtyForm = false;
+            }
+            setShowForm(false); setAbCollapsed(true); setReorderMode(false);
           }}>
-            At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle', position:'relative', bottom:1}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showForm && !editId && !abCollapsed && abs.length > 1 && (
@@ -2178,23 +2184,20 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               onClick={e => {
                 e.stopPropagation();
                 if (abCollapsed) {
-                  setAbCollapsed(false);
-                  setReorderMode(false);
-                  setShowForm(true);
+                  setAbFormFromCollapsed(true); setAbCollapsed(false); setReorderMode(false); setShowForm(true);
                 } else if (showForm) {
+                  if (window.__dirtyForm) {
+                    if (!window.confirm('You have unsaved changes. Discard?')) return;
+                    window.__dirtyForm = false;
+                  }
                   setShowForm(false);
-                  setAbCollapsed(true);
+                  if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
                 } else {
-                  setReorderMode(false);
-                  setShowForm(true);
+                  setAbFormFromCollapsed(false); setReorderMode(false); setShowForm(true);
                 }
               }}>
               {(!abCollapsed && showForm) ? 'Cancel' : '+ Record AB'}
             </button>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
-              if (!abCollapsed && showForm) { setShowForm(false); setAbCollapsed(true); }
-              else { setAbCollapsed(c=>!c); }
-            }}></i>
           </div>
         </div>
 
@@ -2285,10 +2288,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Spray Chart ── */}
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-          <div style={{...S.sectionTitle, marginBottom:0}}>
-            Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
+            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
           </div>
-          <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11}}></i>
         </div>
         {!sprayCollapsed && (
           <div style={{display:'flex', alignItems:'center', gap:8, paddingTop:10, flexWrap:'wrap'}}>
@@ -2340,12 +2343,17 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── Fielding ── */}
       <div style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-          <div style={{...S.sectionTitle, marginBottom:0, cursor:'pointer', flex:1}} onClick={()=>{
-            if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
-            else { setFieldingCollapsed(c=>!c); }
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
+            if (fieldingCollapsed) { setFieldingCollapsed(false); return; }
+            if (showFieldingForm && window.__dirtyForm) {
+              if (!window.confirm('You have unsaved changes. Discard and collapse?')) return;
+              window.__dirtyForm = false;
+            }
+            setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false);
           }}>
-            Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showFieldingForm && !fieldingCollapsed && fieldingEntries.length > 1 && (
@@ -2356,26 +2364,22 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               onClick={e => {
                 e.stopPropagation();
                 if (fieldingCollapsed) {
-                  setFieldingCollapsed(false);
-                  setShowFieldingForm(true);
-                  setEditFieldingId(null);
+                  setFieldingFormFromCollapsed(true); setFieldingCollapsed(false); setShowFieldingForm(true); setEditFieldingId(null);
                   setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,fe:0,te:0,notes:''});
                 } else if (showFieldingForm) {
-                  setShowFieldingForm(false);
-                  setEditFieldingId(null);
-                  setFieldingCollapsed(true);
+                  if (window.__dirtyForm) {
+                    if (!window.confirm('You have unsaved changes. Discard?')) return;
+                    window.__dirtyForm = false;
+                  }
+                  setShowFieldingForm(false); setEditFieldingId(null);
+                  if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }
                 } else {
-                  setShowFieldingForm(true);
-                  setEditFieldingId(null);
+                  setFieldingFormFromCollapsed(false); setShowFieldingForm(true); setEditFieldingId(null);
                   setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,fe:0,te:0,notes:''});
                 }
               }}>
               {(!fieldingCollapsed && showFieldingForm) ? 'Cancel' : '+ Record Fielding'}
             </button>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, cursor:'pointer'}} onClick={()=>{
-              if (!fieldingCollapsed && showFieldingForm) { setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); }
-              else { setFieldingCollapsed(c=>!c); }
-            }}></i>
           </div>
         </div>
 
@@ -2383,7 +2387,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           <div style={{paddingTop:12, display:'flex', flexDirection:'column', gap:10}}>
             {fieldingToast && (
               <div style={{...S.card, border:'1px solid var(--success)', background:'rgba(39,103,73,0.08)', textAlign:'center', padding:'20px 16px'}}>
-                <div style={{fontSize:40, color:'var(--success)'}}><i className="fa-solid fa-circle-check"></i></div>
+                <div style={{fontSize:40, color:'#1a7a4a'}}><i className="fa-solid fa-circle-check"></i></div>
               </div>
             )}
             {showFieldingForm && (
