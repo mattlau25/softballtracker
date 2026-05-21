@@ -1903,6 +1903,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [showOuts, setShowOuts] = useState(true);
   const [confirmAB, setConfirmAB] = useState(null);
   const [confirmGame, setConfirmGame] = useState(false);
+  const [confirmFielding, setConfirmFielding] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
@@ -1947,7 +1948,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   };
 
   const deleteFielding = async id => {
-    await fieldingCol().doc(id).delete(); loadFielding();
+    await fieldingCol().doc(id).delete(); setConfirmFielding(null); loadFielding();
   };
 
   const startEditFielding = entry => {
@@ -2032,6 +2033,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
     <div className="page-content">
       {confirmAB && <ConfirmModal message="Delete this at bat?" onConfirm={()=>delAB(confirmAB)} onCancel={()=>setConfirmAB(null)}/>}
       {confirmGame && <ConfirmModal message="Delete this game? All recorded ABs will also be deleted." onConfirm={delGame} onCancel={()=>setConfirmGame(false)}/>}
+      {confirmFielding && <ConfirmModal message="Delete this fielding entry?" onConfirm={()=>deleteFielding(confirmFielding)} onCancel={()=>setConfirmFielding(null)}/>}
       {warnModal && (warnModal.onConfirm
         ? <WarnModal message={warnModal.message} confirmLabel="Discard"
             onConfirm={() => { const cb = warnModal.onConfirm; setWarnModal(null); cb(); }}
@@ -2397,7 +2399,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                 <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
                   <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
                 </div>
-                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}</p>
+                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
+                  {sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}
+                  {' · '}<span style={{color:'var(--success)'}}>●</span> Hit
+                  {showOuts&&<> · <span style={{color:'var(--danger)'}}>●</span> Out · <span style={{color:'#2e6db4'}}>●</span> Other</>}
+                </p>
                 {dirTotal > 0 && showHeatmap==='spray' && (
                   <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
                     <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
@@ -2583,7 +2589,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     </div>
                     <div style={{display:'flex', gap:6}}>
                       {!fieldingReorderMode && <button onClick={()=>startEditFielding(entry)} style={S.btnSmall}>Edit</button>}
-                      {!fieldingReorderMode && <button onClick={()=>deleteFielding(entry.id)} style={S.btnDanger}>Delete</button>}
+                      {!fieldingReorderMode && <button onClick={()=>setConfirmFielding(entry.id)} style={S.btnDanger}>Delete</button>}
                     </div>
                   </div>
                   {entry.notes && <p style={{...S.muted, fontSize:12, fontStyle:'italic', margin:0}}>{entry.notes}</p>}
@@ -3234,13 +3240,13 @@ function StatsPage({ uid }) {
               </div>
             </div>
           </div>
-          {sprayFiltered.length===0?<p style={{...S.muted,textAlign:'center',padding:'20px 0'}}>No charted balls for this selection.</p>:(
+          {sprayFiltered.length===0?<p style={{...S.muted,textAlign:'center',padding:'20px 0'}}>No mapped balls for this selection.</p>:(
             <>
               <div style={{display:'flex',justifyContent:'center',background:'var(--spray-bg)',borderRadius:10,padding:12}}>
                 <SprayChart interactive={false} hits={sprayFiltered} size={360} showHeatmap={sprayView==='heat'} showZones={sprayView==='zones'}/>
               </div>
               <p style={{...S.hint,marginTop:8,textAlign:'center'}}>
-                {sprayFiltered.length} charted {sprayFiltered.length===1?'ball':'balls'} · {sprayScope==='season'?effectiveSeason:'Career'}
+                {sprayFiltered.length} mapped {sprayFiltered.length===1?'ball':'balls'} · {sprayScope==='season'?effectiveSeason:'Career'}
                 {' · '}<span style={{color:'var(--success)'}}>●</span> Hit
                 {sprayFilter==='all'&&<> · <span style={{color:'var(--danger)'}}>●</span> Out · <span style={{color:'#2e6db4'}}>●</span> Other</>}
               </p>
@@ -3514,7 +3520,7 @@ function GameLogPage({ uid, setPage, setGameId }) {
                     ))}
                   </div>
                 </div>
-                {sp.length===0?<p style={{...S.muted,textAlign:'center',padding:'20px 0'}}>No charted balls.</p>:(
+                {sp.length===0?<p style={{...S.muted,textAlign:'center',padding:'20px 0'}}>No mapped balls.</p>:(
                   <>
                     <div style={{display:'flex',justifyContent:'center',background:'var(--spray-bg)',borderRadius:8,padding:8}}>
                       <SprayChart interactive={false} hits={sp} size={260} showHeatmap={spv==='heat'} showZones={spv==='zones'}/>
