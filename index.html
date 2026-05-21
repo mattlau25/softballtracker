@@ -3217,13 +3217,13 @@ function StatsPage({ uid }) {
         <div style={S.card}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}}>
             <div style={S.cardTitle}>Spray Chart</div>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}}>
               <div style={{display:'flex',gap:4}}>
                 {[['career','Career'],['season','Season']].map(([v,l])=>(
                   <button key={v} onClick={()=>setSprayScope(v)} style={{...S.btnSmall,...(sprayScope===v?{background:'var(--primary)',color:'var(--primary-text)',borderColor:'var(--primary)',fontWeight:700}:{})}}>{l}</button>
                 ))}
               </div>
-              {sprayScope==='season'&&seasons.length>1&&(
+              {sprayScope==='season'&&(
                 <select style={{...S.select,width:'auto',padding:'4px 8px',fontSize:12}} value={effectiveSeason} onChange={e=>setActiveSeason(e.target.value)}>
                   {seasons.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
