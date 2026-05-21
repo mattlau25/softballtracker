@@ -579,6 +579,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
 
   const handleTouchStart = e => {
     if (!interactive) return;
+    e.preventDefault(); // Always prevent long-press context menu / image save prompt
     if (!plotted) return;
     const touch = e.touches[0];
     const p = toPx(plotted);
@@ -591,7 +592,6 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
     if (dist <= DOT_R * 2) {
       isDragging.current = true;
       dragMoved.current = false;
-      e.preventDefault();
     }
   };
 
@@ -620,7 +620,7 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
 
   return (
     <div
-      style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none'}}
+      style={{position:'relative', width:'100%', cursor: interactive ? 'crosshair' : 'default', userSelect:'none', WebkitUserSelect:'none', touchAction:'none'}}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -629,9 +629,10 @@ function SprayChart({ onPlot, plotted, interactive = true, hits = [], size = 320
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onContextMenu={e => e.preventDefault()}
     >
       <div style={{position:'relative'}}>
-        <img ref={imgRef} src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8}} draggable={false}/>
+        <img ref={imgRef} src={DIAMOND_URL} alt="field" style={{width:'100%', display:'block', borderRadius:8, WebkitTouchCallout:'none'}} draggable={false} onContextMenu={e=>e.preventDefault()}/>
         <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} preserveAspectRatio="none" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none'}}>
         {visibleHits.map((h,i) => {
           const p = toPx(h.spray);
@@ -1025,6 +1026,11 @@ function BatsPage({ uid }) {
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Bat Name / Model *</label>
             <input style={S.input} value={form.name} onChange={e => upd('name', e.target.value)} placeholder="e.g. DeMarini CF Zen 26oz"/>
+          </div>
+          <div style={{...S.formGroup, gridColumn:'1/-1'}}>
+            <label style={S.label}>Nickname *</label>
+            <input style={S.input} value={form.nickname} onChange={e => upd('nickname', e.target.value)} placeholder='e.g. "The Rocket"'/>
+            <span style={S.hint}>Short name shown in dropdowns and AB records</span>
           </div>
           <div style={S.formGroup}>
             <label style={S.label}>Weight (oz)</label>
@@ -1638,10 +1644,24 @@ function BatDropdown({ bats, value, onChange }) {
 function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' }) {
   const isEdit = !!ab;
   const blank = { batId:'', outcome:'', subOutcome:'', bases:0, rbi:0, trajectory:'', spray:null, comments:'' };
-  const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
+  const initial = isEdit ? {...blank, ...ab} : blank;
+  const [f, setF] = useState(initial);
   const [dirty, setDirty] = useState(false);
   const [toast, setToast] = useState(null);
-  const [validErr, setValidErr] = useState(null);
+  const [validErr, setValidErr] = useState(null); // kept for legacy, now drives modal
+  const [warnModal, setWarnModal] = useState(null); // { message, onConfirm }
+  // For edit mode: track whether user actually changed anything
+  const isDirty = () => {
+    if (!isEdit) return dirty;
+    // Compare key fields
+    const keys = ['batId','outcome','subOutcome','bases','rbi','trajectory','comments'];
+    if (keys.some(k => String(f[k]??'') !== String(initial[k]??''))) return true;
+    // Compare spray (check x/y coords)
+    const si = initial.spray, sf = f.spray;
+    if ((si==null) !== (sf==null)) return true;
+    if (si && sf && (si.x !== sf.x || si.y !== sf.y)) return true;
+    return false;
+  };
   const upd = (k, v) => { setF(x => ({...x, [k]: v})); setDirty(true); window.__dirtyForm = true; };
 
   const outcomeGroup = HIT_OUTCOMES.includes(f.outcome) ? 'hit' : OUT_OUTCOMES.includes(f.outcome) ? 'out' : OTHER_OUTCOMES.includes(f.outcome) ? 'other' : '';
@@ -1661,8 +1681,9 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   };
 
   const handleCancel = () => {
-    if (dirty && !isEdit) {
-      if (!window.confirm('You have unsaved changes. Discard this at bat?')) return;
+    if (isDirty()) {
+      setWarnModal({ message: 'You have unsaved changes. Discard this at bat?', onConfirm: () => { window.__dirtyForm = false; onCancel(); } });
+      return;
     }
     window.__dirtyForm = false;
     onCancel();
@@ -1672,9 +1693,14 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const needsBases = NEEDS_BASES.has(f.outcome);
 
   const save = async () => {
-    // Validation
-    if (needsTraj && !f.trajectory) { setValidErr('Please select a Trajectory.'); return; }
-    if (needsBases && !f.bases) { setValidErr('Please enter Bases Reached.'); return; }
+    // Validation — show modal instead of inline error
+    const missing = [];
+    if (needsTraj && !f.trajectory) missing.push('Trajectory');
+    if (needsBases && !f.bases) missing.push('Bases Reached');
+    if (missing.length) {
+      setWarnModal({ message: `Please select ${missing.join(' and ')}.`, onConfirm: null, cancelLabel: 'OK' });
+      return;
+    }
     setValidErr(null);
     const bat = bats.find(b => b.id === f.batId);
     const bases = autoBase || f.bases || 0;
@@ -1744,7 +1770,23 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
           <button onClick={save} disabled={!f.outcome || (isFoulOut && !f.subOutcome)} style={S.btnPrimary}>{isEdit ? 'Save Changes' : 'Record AB'}</button>
         </div>
       </div>
-      {validErr && <div style={{color:'var(--danger)', fontSize:13, marginBottom:10, padding:'8px 12px', background:'rgba(192,57,43,0.08)', borderRadius:8}}>{validErr}</div>}
+      {warnModal && (warnModal.onConfirm ? (
+        <WarnModal
+          message={warnModal.message}
+          confirmLabel="Discard"
+          onConfirm={() => { setWarnModal(null); warnModal.onConfirm(); }}
+          onCancel={() => setWarnModal(null)}
+          confirmColor="#c53030"
+        />
+      ) : (
+        <WarnModal
+          message={warnModal.message}
+          confirmLabel="OK"
+          onConfirm={() => setWarnModal(null)}
+          onCancel={null}
+          confirmColor="#1e3a5f"
+        />
+      ))}
 
       {/* Bat */}
       <div style={{...S.formGroup, marginBottom:16}}>
@@ -1818,7 +1860,8 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
       {showSpray && (
         <div style={{...S.formGroup, marginBottom:16}}>
           <label style={{...S.label, display:'block', marginBottom:8}}>Hit Location</label>
-          <div style={{width:'100%', background:'var(--spray-bg)', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', display:'flex', justifyContent:'center'}}>
+          <div style={{width:'100%', background:'var(--spray-bg)', borderRadius:10, overflow:'hidden', border:'1px solid var(--border)', display:'flex', justifyContent:'center'}}
+            onContextMenu={e=>e.preventDefault()}>
             <SprayChart onPlot={pt => upd('spray', pt)} plotted={f.spray} interactive={true} size={600}/>
           </div>
           {f.spray && <button onClick={() => upd('spray', null)} style={{...S.btnSmall, marginTop:6, fontSize:11}}>Clear placement</button>}
@@ -1894,6 +1937,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const fieldingCol = () => gamesCol(uid).doc(gameId).collection('fielding');
 
   const [fieldingToast, setFieldingToast] = useState(false);
+  const [warnModal, setWarnModal] = useState(null); // { message, onConfirm } — null=OK-only
 
   const loadFielding = () => fieldingCol().orderBy('createdAt','asc').get()
     .then(s => setFieldingEntries(s.docs.map(d=>({id:d.id,...d.data()}))));
@@ -2002,6 +2046,14 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
     <div className="page-content">
       {confirmAB && <ConfirmModal message="Delete this at bat?" onConfirm={()=>delAB(confirmAB)} onCancel={()=>setConfirmAB(null)}/>}
       {confirmGame && <ConfirmModal message="Delete this game? All recorded ABs will also be deleted." onConfirm={delGame} onCancel={()=>setConfirmGame(false)}/>}
+      {warnModal && (warnModal.onConfirm ? (
+        <WarnModal message={warnModal.message} confirmLabel="Discard"
+          onConfirm={() => { const cb = warnModal.onConfirm; setWarnModal(null); cb(); }}
+          onCancel={() => setWarnModal(null)} confirmColor="#c53030"/>
+      ) : (
+        <WarnModal message={warnModal.message} confirmLabel="OK"
+          onConfirm={() => setWarnModal(null)} onCancel={null} confirmColor="#1e3a5f"/>
+      ))}
 
       <div style={S.pageHeader} className="page-header-row">
         <button onClick={() => setPage(prevPage)} style={S.backBtn}>← {prevPage === 'gamelog' ? 'Game Log' : prevPage === 'stats' ? 'Stats' : 'Games'}</button>
@@ -2173,11 +2225,13 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
             if (abCollapsed) { setAbCollapsed(false); return; }
-            if (showForm && window.__dirtyForm) {
-              if (!window.confirm('You have unsaved changes. Discard and collapse?')) return;
-              window.__dirtyForm = false;
+            if ((showForm || editId) && window.__dirtyForm) {
+              setWarnModal({ message: 'You have unsaved changes. Discard and collapse?', onConfirm: () => {
+                window.__dirtyForm = false; setShowForm(false); setEditId(null); setAbCollapsed(true); setReorderMode(false);
+              }});
+              return;
             }
-            setShowForm(false); setAbCollapsed(true); setReorderMode(false);
+            setShowForm(false); setEditId(null); setAbCollapsed(true); setReorderMode(false);
           }}>
           <div style={{display:'flex', alignItems:'baseline', gap:6}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
@@ -2195,8 +2249,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                   setAbFormFromCollapsed(true); setAbCollapsed(false); setReorderMode(false); setShowForm(true);
                 } else if (showForm) {
                   if (window.__dirtyForm) {
-                    if (!window.confirm('You have unsaved changes. Discard?')) return;
-                    window.__dirtyForm = false;
+                    setWarnModal({ message: 'You have unsaved changes. Discard?', onConfirm: () => {
+                      window.__dirtyForm = false; setShowForm(false);
+                      if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
+                    }});
+                    return;
                   }
                   setShowForm(false);
                   if (abFormFromCollapsed) { setAbCollapsed(true); setAbFormFromCollapsed(false); }
@@ -2397,8 +2454,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
             if (fieldingCollapsed) { setFieldingCollapsed(false); return; }
             if (showFieldingForm && window.__dirtyForm) {
-              if (!window.confirm('You have unsaved changes. Discard and collapse?')) return;
-              window.__dirtyForm = false;
+              setWarnModal({ message: 'You have unsaved changes. Discard and collapse?', onConfirm: () => {
+                window.__dirtyForm = false; setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false);
+              }});
+              return;
             }
             setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false);
           }}>
@@ -2419,8 +2478,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                   setFieldingForm({inning:'',position:profile.primaryPosition||'',putouts:0,assists:0,fe:0,te:0,notes:''});
                 } else if (showFieldingForm) {
                   if (window.__dirtyForm) {
-                    if (!window.confirm('You have unsaved changes. Discard?')) return;
-                    window.__dirtyForm = false;
+                    setWarnModal({ message: 'You have unsaved changes. Discard?', onConfirm: () => {
+                      window.__dirtyForm = false; setShowFieldingForm(false); setEditFieldingId(null);
+                      if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }
+                    }});
+                    return;
                   }
                   setShowFieldingForm(false); setEditFieldingId(null);
                   if (fieldingFormFromCollapsed) { setFieldingCollapsed(true); setFieldingFormFromCollapsed(false); }
@@ -2475,12 +2537,12 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                     <div key={key}>
                       <label style={{...S.label, display:'block', marginBottom:6}}>{lbl}{key==='fe'?' (Field)':key==='te'?' (Throw)':''}</label>
                       <div style={{display:'flex', alignItems:'center', gap:6}}>
-                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:Math.max(0,(f[key]||0)-1)}))}
+                        <button onClick={()=>{setFieldingForm(f=>({...f,[key]:Math.max(0,(f[key]||0)-1)}));window.__dirtyForm=true;}}
                           style={{width:30,height:30,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                           <i className="fa-solid fa-minus" style={{fontSize:10,color:'var(--text)'}}></i>
                         </button>
                         <span style={{fontSize:17,fontWeight:700,minWidth:18,textAlign:'center',color:(key==='fe'||key==='te')&&(fieldingForm[key]||0)>0?'#c53030':'var(--text)'}}>{fieldingForm[key]||0}</span>
-                        <button onClick={()=>setFieldingForm(f=>({...f,[key]:(f[key]||0)+1}))}
+                        <button onClick={()=>{setFieldingForm(f=>({...f,[key]:(f[key]||0)+1}));window.__dirtyForm=true;}}
                           style={{width:30,height:30,borderRadius:6,border:'1.5px solid var(--border)',background:'var(--surface)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                           <i className="fa-solid fa-plus" style={{fontSize:10,color:'var(--text)'}}></i>
                         </button>
@@ -2577,10 +2639,26 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 function ConfirmModal({ message, onConfirm, onCancel, confirmLabel='Delete', confirmColor='#c53030' }) {
   return (
     <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{background:'#fff',borderRadius:14,padding:28,maxWidth:360,width:'100%',boxShadow:'0 8px 32px rgba(0,0,0,0.18)'}}>
-        <p style={{fontSize:15,color:'#1a202c',marginBottom:22,lineHeight:1.5}}>{message}</p>
+      <div style={{background:'var(--surface)',borderRadius:14,padding:28,maxWidth:360,width:'100%',boxShadow:'0 8px 32px rgba(0,0,0,0.18)'}}>
+        <p style={{fontSize:15,color:'var(--text)',marginBottom:22,lineHeight:1.5}}>{message}</p>
         <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
           <button onClick={onCancel} style={S.btnSecondary}>Cancel</button>
+          <button onClick={onConfirm} style={{...S.btnPrimary,background:confirmColor,borderColor:confirmColor}}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── WARN MODAL (unsaved changes / validation) ─────────────────────────────
+// Usage: <WarnModal message="..." onConfirm={...} onCancel={...} confirmLabel="Discard" confirmColor="#c53030"/>
+function WarnModal({ message, onConfirm, onCancel, confirmLabel='Discard', confirmColor='#c53030' }) {
+  return (
+    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.4)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{background:'var(--surface)',borderRadius:14,padding:28,maxWidth:360,width:'100%',boxShadow:'0 8px 32px rgba(0,0,0,0.18)'}}>
+        <p style={{fontSize:15,color:'var(--text)',marginBottom:22,lineHeight:1.5}}>{message}</p>
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+          {onCancel && <button onClick={onCancel} style={S.btnSecondary}>Cancel</button>}
           <button onClick={onConfirm} style={{...S.btnPrimary,background:confirmColor,borderColor:confirmColor}}>{confirmLabel}</button>
         </div>
       </div>
@@ -3804,22 +3882,30 @@ function App() {
   const page = routeState.page;
   const gameId = routeState.gameId;
   const [prevPage, setPrevPage] = useState('games');
+  const [pendingNav, setPendingNav] = useState(null); // { newPage, gId } — set when dirty nav blocked
 
   // Listen for hash changes (back/forward and direct hash navigation)
   useEffect(() => {
-    const onHash = () => setRouteState(getPageFromHash());
+    const onHash = (e) => {
+      // If dirty form, block the navigation and restore old hash
+      if (window.__dirtyForm) {
+        // Restore old hash
+        const oldHash = new URL(e.oldURL).hash || '#games';
+        window.location.hash = oldHash.slice(1);
+        // Show warn modal by encoding target in pendingNav
+        const target = getPageFromHash();
+        setPendingNav({ newPage: target.page, gId: target.gameId, fromHash: true });
+        return;
+      }
+      setRouteState(getPageFromHash());
+    };
     window.addEventListener('hashchange', onHash);
     // Set initial hash if none
     if (!window.location.hash) window.location.hash = 'games';
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const navigate = (newPage, gId = null) => {
-    // Check for unsaved changes
-    if (window.__dirtyForm) {
-      if (!window.confirm('You have unsaved changes. Discard and leave this page?')) return;
-      window.__dirtyForm = false;
-    }
+  const doNavigate = (newPage, gId) => {
     if (newPage === 'game-detail') {
       setPrevPage(page === 'new-game' ? 'games' : page);
     }
@@ -3827,6 +3913,15 @@ function App() {
     const newHash = pageToPath(newPage, resolvedGameId);
     window.location.hash = newHash.slice(1);
     setRouteState({ page: newPage, gameId: resolvedGameId });
+  };
+
+  const navigate = (newPage, gId = null) => {
+    // Check for unsaved changes
+    if (window.__dirtyForm) {
+      setPendingNav({ newPage, gId });
+      return;
+    }
+    doNavigate(newPage, gId);
   };
 
   const setGameId = (id) => {
@@ -3866,6 +3961,15 @@ function App() {
 
   return (
     <div style={{display:'flex', minHeight:'100vh', background:'var(--bg)'}}>
+      {pendingNav && (
+        <WarnModal
+          message="You have unsaved changes. Discard and leave this page?"
+          confirmLabel="Discard"
+          onConfirm={() => { window.__dirtyForm = false; const {newPage,gId} = pendingNav; setPendingNav(null); doNavigate(newPage, gId ?? null); }}
+          onCancel={() => setPendingNav(null)}
+          confirmColor="#c53030"
+        />
+      )}
       <Sidebar page={navPage} setPage={navigate} user={user} pageToPath={pageToPath}/>
       <div className="main-wrap">
         {page === 'games'       && <GamesPage uid={uid} setPage={navigate} setGameId={setGameId} active={page}/>}
