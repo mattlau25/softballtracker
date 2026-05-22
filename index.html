@@ -803,7 +803,7 @@ function LoginScreen() {
 const NAV = [
   { id:'games',   label:'Games'   },
   { id:'stats',   label:'Stats'   },
-  { id:'gamelog', label:'Game Log'},
+  { id:'gamelog', label:'Log'},
   { id:'trends',  label:'Trends'  },
   { id:'seasons', label:'Seasons' },
   { id:'bats',    label:'Bats'    },
@@ -2043,7 +2043,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       )}
 
       <div style={S.pageHeader} className="page-header-row">
-        <button onClick={() => setPage(prevPage)} style={S.backBtn}>← {prevPage === 'gamelog' ? 'Game Log' : prevPage === 'stats' ? 'Stats' : 'Games'}</button>
+        <button onClick={() => setPage(prevPage)} style={S.backBtn}>← {prevPage === 'gamelog' ? 'Log' : prevPage === 'stats' ? 'Stats' : 'Games'}</button>
         <div style={{display:'flex', gap:8}}>
           {!editingGame && <button onClick={()=>setEditingGame(true)} style={S.btnSmall}>Edit Game</button>}
           {!editingGame && abs.length>0 && <button onClick={()=>generateGamePDF(game,abs,profile)} style={S.btnSmall}>↓ PDF</button>}
@@ -3353,12 +3353,12 @@ function GameLogPage({ uid, setPage, setGameId }) {
     return null;
   };
 
-  if(loading) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Game Log</h2></div><p style={S.muted}>Loading...</p></div>;
+  if(loading) return <div className="page-content"><div style={S.pageHeader} className="page-header-row"><h2 style={S.pageTitle}>Log</h2></div><p style={S.muted}>Loading...</p></div>;
 
   return (
     <div className="page-content">
       <div style={S.pageHeader} className="page-header-row">
-        <h2 style={S.pageTitle}>Game Log</h2>
+        <h2 style={S.pageTitle}>Log</h2>
         <div style={{display:'flex',gap:8}}>
           {[['log','☰ Log'],['compare','⇄ Compare']].map(([m,l])=>(
             <button key={m} onClick={()=>setMode(m)} style={{...S.btnSecondary,...(mode===m?{background:'#1e3a5f',color:'#fff',borderColor:'#1e3a5f',fontWeight:700}:{})}}>{l}</button>
