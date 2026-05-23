@@ -3780,7 +3780,49 @@ function generateGamePDF(game, abs, profile) {
   
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/softballtracker/sw.js');
+    const swCode = `
+const CACHE = 'softball-v1';
+const ASSETS = [
+  '/softballtracker/',
+  '/softballtracker/index.html'
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+    ))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.url.includes('firebase') ||
+      e.request.url.includes('googleapis') ||
+      e.request.url.includes('gstatic') ||
+      e.request.url.includes('unpkg') ||
+      e.request.url.includes('cdnjs')) return;
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+      if (res && res.status === 200 && e.request.method === 'GET') {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match('/softballtracker/index.html')))
+  );
+});
+`;
+    const blob = new Blob([swCode], {type: 'application/javascript'});
+    const url = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(url, {scope: '/softballtracker/'})
+      .then(() => URL.revokeObjectURL(url))
+      .catch(err => console.log('SW failed:', err));
   }
 </script>
 </body></html>`;
