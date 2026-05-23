@@ -3783,7 +3783,7 @@ function generateGamePDF(game, abs, profile) {
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/softball-tracker/sw.js')
+      navigator.serviceWorker.register('/softballtracker/sw.js')
         .then(function(reg) { console.log('SW registered'); })
         .catch(function(err) { console.log('SW registration failed:', err); });
     });

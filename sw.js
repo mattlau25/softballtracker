@@ -1,10 +1,10 @@
 const CACHE_NAME = 'softball-tracker-v1';
 const ASSETS_TO_CACHE = [
-  '/softball-tracker/',
-  '/softball-tracker/index.html',
-  '/softball-tracker/manifest.json',
-  '/softball-tracker/icon-192.png',
-  '/softball-tracker/icon-512.png'
+  '/softballtracker/',
+  '/softballtracker/index.html',
+  '/softballtracker/manifest.json',
+  '/softballtracker/icon-192.png',
+  '/softballtracker/icon-512.png'
 ];
 
 // Install: cache app shell
@@ -61,7 +61,7 @@ self.addEventListener('fetch', function(event) {
       }).catch(function() {
         // Offline fallback: serve index.html for navigation requests
         if (event.request.mode === 'navigate') {
-          return caches.match('/softball-tracker/index.html');
+          return caches.match('/softballtracker/index.html');
         }
       });
     })
