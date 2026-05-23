@@ -2,7 +2,7 @@
   "name": "Softball Tracker",
   "short_name": "Softball",
   "description": "Personal softball stats tracker",
-  "start_url": "/softballtracker/",
+  "start_url": "https://mattlau25.github.io/softballtracker/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2c4a6e",
