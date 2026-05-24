@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Softball Tracker">
-<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Tracker</title>
@@ -341,8 +338,6 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.firestore();
-db.enablePersistence({ synchronizeTabs: true })
-  .catch(err => console.log('Offline persistence unavailable:', err.code));
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1443,7 +1438,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                     {fmtDate(g.date)}{g.time ? ` · ${fmtTime(g.time)}` : ''}{g.park ? ` · ${g.park}` : ''}
                   </div>
                   {g.season && <div style={{...S.listSub, marginTop:2}}>{g.season}</div>}
-                  {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}</div>}
+                  {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}{s.r>0?` · ${s.r} R`:''}</div>}
                   {showComments && g.comments && <div style={{fontSize:12, color:'var(--muted)', marginTop:6, fontStyle:'italic', whiteSpace:'pre-wrap', borderTop:'1px solid var(--border)', paddingTop:6}}>{g.comments}</div>}
                 </div>
                 <span style={{color:'var(--muted)', fontSize:16, flexShrink:0}}>›</span>
@@ -1673,7 +1668,7 @@ function BatDropdown({ bats, value, onChange }) {
 // ─── AB FORM ───────────────────────────────────────────────────────────────────
 function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' }) {
   const isEdit = !!ab;
-  const blank = { batId:'', outcome:'', subOutcome:'', bases:0, rbi:0, trajectory:'', spray:null, comments:'' };
+  const blank = { batId:'', outcome:'', subOutcome:'', bases:0, rbi:0, runScored:null, trajectory:'', spray:null, comments:'' };
   const [f, setF] = useState(isEdit ? {...blank, ...ab} : blank);
   const [toast, setToast] = useState(null);
   const [validModal, setValidModal] = useState(null);
@@ -1687,10 +1682,13 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
   const showBases = ['Reach on Error', "Fielder's Choice"].includes(f.outcome);
   const autoBase = HIT_BASES[f.outcome] || null;
   const showRBI = f.outcome && !['Strikeout'].includes(f.outcome) && !isFoulK && !(isFoulOut && !f.subOutcome);
+  const RUN_SCORED_OUTCOMES = new Set(['Single','Double','Triple','Home Run','Walk','Hit by Pitch','Reach on Error',"Fielder's Choice"]);
+  const showRunScored = RUN_SCORED_OUTCOMES.has(f.outcome);
+  const isHR = f.outcome === 'Home Run';
 
   const setOutcome = (o) => {
     haptic('light');
-    setF(x => ({...x, outcome: o, subOutcome:'', bases: HIT_BASES[o] || 0}));
+    setF(x => ({...x, outcome: o, subOutcome:'', bases: HIT_BASES[o] || 0, runScored: o === 'Home Run' ? true : x.runScored}));
     window.__dirtyForm = true;
   };
 
@@ -1707,6 +1705,7 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
     const missing = [];
     if (needsTraj && !f.trajectory) missing.push('Trajectory');
     if (needsBases && !f.bases) missing.push('Bases Reached');
+    if (showRunScored && f.runScored === null) missing.push('Run Scored');
     if (missing.length) { setValidModal(`Please select ${missing.join(' and ')}.`); return; }
     const bat = bats.find(b => b.id === f.batId);
     const bases = autoBase || f.bases || 0;
@@ -1873,6 +1872,36 @@ function ABForm({ uid, gameId, ab, bats, onSave, onCancel, defaultPosition='' })
               <i className="fa-solid fa-plus" style={{fontSize:12}}></i>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Run Scored */}
+      {showRunScored && (
+        <div style={{...S.formGroup, marginBottom:16}}>
+          <label style={{...S.label, display:'block', marginBottom:8}}>Run Scored? *</label>
+          <div style={{display:'flex', gap:8}}>
+            <button
+              onClick={() => { if (!isHR) upd('runScored', true); }}
+              disabled={isHR}
+              style={{flex:1, padding:'11px 14px', borderRadius:8, border:'1.5px solid', cursor: isHR ? 'default' : 'pointer', fontSize:14, fontWeight: f.runScored===true ? 700 : 400, transition:'all 0.1s',
+                background: f.runScored===true ? '#c8eee0' : 'var(--surface)',
+                borderColor: f.runScored===true ? '#2d8f6f' : 'var(--border)',
+                color: f.runScored===true ? '#1a7a5a' : 'var(--text)',
+                opacity: isHR ? 0.7 : 1}}>
+              Scored
+            </button>
+            <button
+              onClick={() => { if (!isHR) upd('runScored', false); }}
+              disabled={isHR}
+              style={{flex:1, padding:'11px 14px', borderRadius:8, border:'1.5px solid', cursor: isHR ? 'default' : 'pointer', fontSize:14, fontWeight: f.runScored===false ? 700 : 400, transition:'all 0.1s',
+                background: f.runScored===false ? '#fad0cc' : 'var(--surface)',
+                borderColor: f.runScored===false ? '#c0392b' : 'var(--border)',
+                color: f.runScored===false ? '#c0392b' : 'var(--text)',
+                opacity: isHR ? 0.7 : 1}}>
+              Did Not Score
+            </button>
+          </div>
+          {isHR && <p style={{...S.hint, marginTop:6}}>Automatically set for Home Runs.</p>}
         </div>
       )}
 
@@ -3974,18 +4003,6 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
-</script>
-
-<script>
-  if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjEnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
-    var code = atob(b64);
-    var blob = new Blob([code], {type: 'application/javascript'});
-    var url = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(url)
-      .then(function() { URL.revokeObjectURL(url); })
-      .catch(function(e) { console.log('SW failed:', e); });
-  }
 </script>
 </body>
 </html>
