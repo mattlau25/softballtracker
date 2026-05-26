@@ -864,7 +864,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div style={{padding:'10px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v2.47
+        v2.48
       </div>
     </nav>
   );
@@ -1455,11 +1455,11 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                   {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}{s.r>0?` · ${s.r} R`:''}</div>}
 
                   {showComments && (g.comments || g.notesBatting || g.notesFielding || g.notesThrowing) && (
-                    <div style={{borderTop:'1px solid var(--border)', paddingTop:10, marginTop:6, display:'flex', flexDirection:'column', gap:10}}>
-                      {g.comments && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Game Notes</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.comments}</p></div>}
-                      {g.notesBatting && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Batting</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.notesBatting}</p></div>}
-                      {g.notesFielding && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Fielding</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.notesFielding}</p></div>}
-                      {g.notesThrowing && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Throwing</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.notesThrowing}</p></div>}
+                    <div style={{borderTop:'1px solid var(--border)', paddingTop:10, marginTop:6, display:'flex', flexDirection:'column', gap:18}}>
+                      {g.comments && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Game Notes</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{g.comments}</p></div>}
+                      {g.notesBatting && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Batting</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{g.notesBatting}</p></div>}
+                      {g.notesFielding && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Fielding</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{g.notesFielding}</p></div>}
+                      {g.notesThrowing && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Throwing</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{g.notesThrowing}</p></div>}
                     </div>
                   )}
                 </div>
@@ -2289,11 +2289,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             </div>
           )}
           {(game.comments || game.notesBatting || game.notesFielding || game.notesThrowing) && (
-            <div style={{marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, display:'flex', flexDirection:'column', gap:14}}>
-              {game.comments && <div><div style={{...S.label, marginBottom:5}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.comments}</p></div>}
-              {game.notesBatting && <div><div style={{...S.label, marginBottom:5}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesBatting}</p></div>}
-              {game.notesFielding && <div><div style={{...S.label, marginBottom:5}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesFielding}</p></div>}
-              {game.notesThrowing && <div><div style={{...S.label, marginBottom:5}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesThrowing}</p></div>}
+            <div style={{marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, display:'flex', flexDirection:'column', gap:18}}>
+              {game.comments && <div><div style={{...S.label, marginBottom:5}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{game.comments}</p></div>}
+              {game.notesBatting && <div><div style={{...S.label, marginBottom:5}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{game.notesBatting}</p></div>}
+              {game.notesFielding && <div><div style={{...S.label, marginBottom:5}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{game.notesFielding}</p></div>}
+              {game.notesThrowing && <div><div style={{...S.label, marginBottom:5}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{game.notesThrowing}</p></div>}
             </div>
           )}
         </div>
@@ -3124,11 +3124,11 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
             </div>
           </div>
         ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:14, marginTop:10}}>
+          <div style={{display:'flex', flexDirection:'column', gap:18, marginTop:10}}>
             {[['General Notes','notesGeneral'],['Batting','notesBatting'],['Fielding','notesFielding'],['Throwing','notesThrowing']].map(([label,key]) => practice[key] ? (
               <div key={key}>
                 <div style={{...S.label, marginBottom:5}}>{label}</div>
-                <p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{practice[key]}</p>
+                <p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{practice[key]}</p>
               </div>
             ) : null)}
             {!practice.notesGeneral && !practice.notesBatting && !practice.notesFielding && !practice.notesThrowing &&
@@ -3283,11 +3283,11 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
             <div style={{fontWeight:600, fontSize:15, color:'var(--text)'}}>{p.date ? new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : 'No date'}</div>
             {p.park && <div style={{fontSize:13, color:'var(--muted)', marginTop:2}}>{p.park}</div>}
             {showNotes && (p.notesGeneral || p.notesBatting || p.notesFielding || p.notesThrowing) && (
-              <div style={{borderTop:'1px solid var(--border)', paddingTop:8, marginTop:8, display:'flex', flexDirection:'column', gap:8}}>
-                {p.notesGeneral && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>General Notes</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesGeneral}</p></div>}
-                {p.notesBatting && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Batting</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesBatting}</p></div>}
-                {p.notesFielding && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Fielding</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesFielding}</p></div>}
-                {p.notesThrowing && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Throwing</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesThrowing}</p></div>}
+              <div style={{borderTop:'1px solid var(--border)', paddingTop:8, marginTop:8, display:'flex', flexDirection:'column', gap:18}}>
+                {p.notesGeneral && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>General Notes</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{p.notesGeneral}</p></div>}
+                {p.notesBatting && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Batting</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{p.notesBatting}</p></div>}
+                {p.notesFielding && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Fielding</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{p.notesFielding}</p></div>}
+                {p.notesThrowing && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Throwing</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0, lineHeight:1.2}}>{p.notesThrowing}</p></div>}
               </div>
             )}
           </div>
