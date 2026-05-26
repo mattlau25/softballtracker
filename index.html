@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Softball Tracker">
+<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Tracker</title>
@@ -338,6 +341,8 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true })
+  .catch(err => console.log('Offline persistence unavailable:', err.code));
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -401,6 +406,8 @@ const batsCol  = uid => userDoc(uid).collection('bats');
 const gamesCol = uid => userDoc(uid).collection('games');
 const absCol   = (uid, gid) => gamesCol(uid).doc(gid).collection('abs');
 const seasonsCol = uid => userDoc(uid).collection('seasons');
+const parksCol = uid => userDoc(uid).collection('parks');
+const practicesCol = uid => userDoc(uid).collection('practices');
 
 // ─── STAT HELPERS ──────────────────────────────────────────────────────────────
 const fmt3 = n => isNaN(n) || !isFinite(n) ? '.000' : '.' + Math.round(n * 1000).toString().padStart(3,'0');
@@ -801,12 +808,14 @@ function LoginScreen() {
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id:'games',   label:'Games'   },
-  { id:'stats',   label:'Stats'   },
-  { id:'gamelog', label:'Log'},
-  { id:'trends',  label:'Trends'  },
-  { id:'seasons', label:'Seasons' },
-  { id:'bats',    label:'Bats'    },
+  { id:'games',     label:'Games'     },
+  { id:'practices', label:'Practices' },
+  { id:'stats',     label:'Stats'     },
+  { id:'gamelog',   label:'Log'       },
+  { id:'trends',    label:'Trends'    },
+  { id:'seasons',   label:'Seasons'   },
+  { id:'parks',     label:'Parks'     },
+  { id:'bats',      label:'Bats'      },
 ];
 function NavIcon({ id }) {
   const props = { width:16, height:16, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:2, strokeLinecap:'round', strokeLinejoin:'round' };
@@ -816,6 +825,8 @@ function NavIcon({ id }) {
   if (id === 'trends')  return <svg {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
   if (id === 'seasons') return <svg {...props}><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2a10 10 0 0 0 0 20"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10"/><path d="M12 2c2.8 3 4 6 4 10s-1.2 7-4 10"/></svg>;
   if (id === 'bats')    return <svg {...props}><line x1="5" y1="19" x2="19" y2="5"/><circle cx="20" cy="4" r="2"/><path d="M5 19 L2 22"/></svg>;
+  if (id === 'practices') return <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>;
+  if (id === 'parks') return <svg {...props}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
   if (id === 'profile') return <svg {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
   return null;
 }
@@ -1454,7 +1465,10 @@ function GamesPage({ uid, setPage, setGameId, active }) {
 // ─── NEW GAME PAGE ─────────────────────────────────────────────────────────────
 function NewGamePage({ uid, setPage, setGameId }) {
   const today = new Date().toISOString().split('T')[0];
-  const [f, setF] = useState({ date:today, time:'', dayNight:'', park:'', homeAway:'', opponent:'', myScore:'', oppScore:'', teamName:'', league:'', tier:'', season:'', comments:'' });
+  const [f, setF] = useState({ date:today, time:'', dayNight:'', park:'', homeAway:'', opponent:'', myScore:'', oppScore:'', teamName:'', league:'', tier:'', season:'', comments:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
+  const [parks, setParks] = useState([]);
+  const [parkSearch, setParkSearch] = useState('');
+  const [showParkDropdown, setShowParkDropdown] = useState(false);
   const [seasons, setSeasons] = useState([]);
   const [selectedSeasonId, setSelectedSeasonId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -1463,6 +1477,7 @@ function NewGamePage({ uid, setPage, setGameId }) {
 
   useEffect(() => {
     seasonsCol(uid).orderBy('createdAt','desc').get().then(s => setSeasons(s.docs.map(d => ({id:d.id,...d.data()}))));
+    parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
   }, [uid]);
 
   useEffect(() => {
@@ -1521,7 +1536,25 @@ function NewGamePage({ uid, setPage, setGameId }) {
           </div>
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Park / Location</label>
-            <input style={S.input} value={f.park} onChange={e => upd('park', e.target.value)} placeholder="e.g. Christie Pits Diamond 1"/>
+            <div style={{position:'relative'}}>
+              <input style={S.input} value={f.park}
+                onChange={e => { upd('park', e.target.value); setParkSearch(e.target.value); setShowParkDropdown(true); }}
+                onFocus={() => setShowParkDropdown(true)}
+                onBlur={() => setTimeout(() => setShowParkDropdown(false), 150)}
+                placeholder="e.g. Christie Pits Diamond 1"/>
+              {showParkDropdown && parks.filter(p => p.name.toLowerCase().includes((f.park||'').toLowerCase())).length > 0 && (
+                <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
+                  {parks.filter(p => p.name.toLowerCase().includes((f.park||'').toLowerCase())).map(p => (
+                    <div key={p.id} onMouseDown={() => { upd('park', p.name); setShowParkDropdown(false); }}
+                      style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
+                      onMouseEnter={e => e.target.style.background='var(--hover)'}
+                      onMouseLeave={e => e.target.style.background='transparent'}>
+                      {p.name}{p.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{p.fieldType}</span> : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div style={{...S.formGroup, gridColumn:'1/-1'}}>
             <label style={S.label}>Opponent</label>
@@ -1571,8 +1604,25 @@ function NewGamePage({ uid, setPage, setGameId }) {
       </div>
 
       <div style={S.card}>
-        <div style={S.cardTitle}>Game Comments</div>
-        <textarea style={{...S.input, height:90, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Field conditions, weather, notes about the game..."/>
+        <div style={S.cardTitle}>Notes</div>
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div>
+            <label style={{...S.label, display:'block', marginBottom:6}}>Game Notes</label>
+            <textarea style={{...S.input, height:75, resize:'vertical'}} value={f.comments} onChange={e => upd('comments', e.target.value)} placeholder="Field conditions, weather, general notes..."/>
+          </div>
+          <div>
+            <label style={{...S.label, display:'block', marginBottom:6}}>Batting</label>
+            <textarea style={{...S.input, height:75, resize:'vertical'}} value={f.notesBatting||''} onChange={e => upd('notesBatting', e.target.value)} placeholder="How was your batting?"/>
+          </div>
+          <div>
+            <label style={{...S.label, display:'block', marginBottom:6}}>Fielding</label>
+            <textarea style={{...S.input, height:75, resize:'vertical'}} value={f.notesFielding||''} onChange={e => upd('notesFielding', e.target.value)} placeholder="How was your fielding?"/>
+          </div>
+          <div>
+            <label style={{...S.label, display:'block', marginBottom:6}}>Throwing</label>
+            <textarea style={{...S.input, height:75, resize:'vertical'}} value={f.notesThrowing||''} onChange={e => upd('notesThrowing', e.target.value)} placeholder="How was your throwing?"/>
+          </div>
+        </div>
       </div>
       <div style={{display:'flex', gap:10, justifyContent:'flex-end'}}>
         <button onClick={() => setPage('games')} style={S.btnSecondary}>Cancel</button>
@@ -2161,8 +2211,20 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               <input style={S.input} value={gameForm.tier||''} onChange={e=>updGame('tier',e.target.value)}/>
             </div>
             <div style={{...S.formGroup, gridColumn:'1/-1'}}>
-              <label style={S.label}>Comments</label>
-              <textarea style={{...S.input,height:80,resize:'vertical'}} value={gameForm.comments||''} onChange={e=>updGame('comments',e.target.value)}/>
+              <label style={S.label}>Game Notes</label>
+              <textarea style={{...S.input,height:75,resize:'vertical'}} value={gameForm.comments||''} onChange={e=>updGame('comments',e.target.value)} placeholder="Field conditions, weather, general notes..."/>
+            </div>
+            <div style={{...S.formGroup, gridColumn:'1/-1'}}>
+              <label style={S.label}>Batting</label>
+              <textarea style={{...S.input,height:75,resize:'vertical'}} value={gameForm.notesBatting||''} onChange={e=>updGame('notesBatting',e.target.value)} placeholder="How was your batting?"/>
+            </div>
+            <div style={{...S.formGroup, gridColumn:'1/-1'}}>
+              <label style={S.label}>Fielding</label>
+              <textarea style={{...S.input,height:75,resize:'vertical'}} value={gameForm.notesFielding||''} onChange={e=>updGame('notesFielding',e.target.value)} placeholder="How was your fielding?"/>
+            </div>
+            <div style={{...S.formGroup, gridColumn:'1/-1'}}>
+              <label style={S.label}>Throwing</label>
+              <textarea style={{...S.input,height:75,resize:'vertical'}} value={gameForm.notesThrowing||''} onChange={e=>updGame('notesThrowing',e.target.value)} placeholder="How was your throwing?"/>
             </div>
           </div>
           <div style={{display:'flex', gap:10, marginTop:14, justifyContent:'flex-end'}}>
@@ -2199,7 +2261,14 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               {game.season && <span style={{color:'var(--label)'}}>{game.season}</span>}
             </div>
           )}
-          {game.comments && <p style={{...S.muted, marginTop:12, fontStyle:'italic', borderTop:'1px solid var(--border)', paddingTop:10, whiteSpace:'pre-wrap'}}>{game.comments}</p>}
+          {(game.comments || game.notesBatting || game.notesFielding || game.notesThrowing) && (
+            <div style={{marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, display:'flex', flexDirection:'column', gap:10}}>
+              {game.comments && <div><div style={{...S.label, marginBottom:3}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.comments}</p></div>}
+              {game.notesBatting && <div><div style={{...S.label, marginBottom:3}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesBatting}</p></div>}
+              {game.notesFielding && <div><div style={{...S.label, marginBottom:3}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesFielding}</p></div>}
+              {game.notesThrowing && <div><div style={{...S.label, marginBottom:3}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesThrowing}</p></div>}
+            </div>
+          )}
         </div>
       )}
 
@@ -2826,6 +2895,353 @@ function SeasonsPage({ uid }) {
     </div>
   );
 }
+
+// ─── PARKS PAGE ───────────────────────────────────────────────────────────────
+function ParksPage({ uid }) {
+  const [parks, setParks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editPark, setEditPark] = useState(null);
+  const [f, setF] = useState({ name:'', fieldType:'' });
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  useEffect(() => {
+    parksCol(uid).orderBy('name','asc').onSnapshot(s => {
+      setParks(s.docs.map(d => ({id:d.id,...d.data()})));
+      setLoading(false);
+    });
+  }, [uid]);
+
+  const openAdd = () => { setF({ name:'', fieldType:'' }); setEditPark(null); setShowForm(true); };
+  const openEdit = (p) => { setF({ name:p.name, fieldType:p.fieldType||'' }); setEditPark(p); setShowForm(true); };
+  const cancel = () => { setShowForm(false); setEditPark(null); };
+
+  const save = async () => {
+    if (!f.name.trim()) return;
+    if (editPark) {
+      await parksCol(uid).doc(editPark.id).update({ name:f.name.trim(), fieldType:f.fieldType });
+    } else {
+      await parksCol(uid).add({ name:f.name.trim(), fieldType:f.fieldType, createdAt:firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    setShowForm(false); setEditPark(null);
+  };
+
+  const deletePark = async (id) => {
+    await parksCol(uid).doc(id).delete();
+    setDeleteConfirm(null);
+  };
+
+  if (loading) return <div style={{padding:24,color:'var(--muted)'}}>Loading...</div>;
+
+  return (
+    <div style={{maxWidth:600, margin:'0 auto', padding:'16px 12px'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
+        <h2 style={{margin:0, fontSize:20, fontWeight:700, color:'var(--text)'}}>Parks</h2>
+        <button onClick={openAdd} style={S.btnPrimary}>+ Add Park</button>
+      </div>
+
+      {showForm && (
+        <div style={{...S.card, marginBottom:16, border:'1px solid var(--border)'}}>
+          <div style={{...S.cardTitle, marginBottom:14}}>{editPark ? 'Edit Park' : 'Add Park'}</div>
+          <div style={{...S.formGroup, marginBottom:12}}>
+            <label style={S.label}>Park Name *</label>
+            <input style={S.input} value={f.name} onChange={e => setF(x=>({...x,name:e.target.value}))} placeholder="e.g. Christie Pits Diamond 1" autoFocus/>
+          </div>
+          <div style={{...S.formGroup, marginBottom:16}}>
+            <label style={{...S.label, display:'block', marginBottom:8}}>Field Type</label>
+            <div style={{display:'flex', gap:8}}>
+              {['Open Field','Fenced'].map(ft => (
+                <button key={ft} onClick={() => setF(x=>({...x,fieldType:f.fieldType===ft?'':ft}))}
+                  style={{flex:1, padding:'10px 14px', borderRadius:8, border:'1.5px solid', cursor:'pointer', fontSize:14, fontWeight:f.fieldType===ft?700:400, transition:'all 0.1s',
+                    background:f.fieldType===ft?'#1e3a5f':'var(--surface)',
+                    borderColor:f.fieldType===ft?'#1e3a5f':'var(--border)',
+                    color:f.fieldType===ft?'#fff':'var(--text)'}}>
+                  {ft}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+            <button onClick={cancel} style={S.btnSecondary}>Cancel</button>
+            <button onClick={save} disabled={!f.name.trim()} style={S.btnPrimary}>{editPark ? 'Save Changes' : 'Add Park'}</button>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && <WarnModal message={`Delete "${deleteConfirm.name}"?`} confirmLabel="Delete" confirmColor="#c53030"
+        onConfirm={() => deletePark(deleteConfirm.id)} onCancel={() => setDeleteConfirm(null)}/>}
+
+      {parks.length === 0 && !showForm && <div style={S.empty}><p>No parks added yet.</p></div>}
+
+      {parks.map(p => (
+        <div key={p.id} style={{...S.card, marginBottom:10, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+          <div>
+            <div style={{fontWeight:600, color:'var(--text)', fontSize:15}}>{p.name}</div>
+            {p.fieldType && <div style={{fontSize:12, color:'var(--muted)', marginTop:2}}>{p.fieldType}</div>}
+          </div>
+          <div style={{display:'flex', gap:8}}>
+            <button onClick={() => openEdit(p)} style={S.btnSmall}>Edit</button>
+            <button onClick={() => setDeleteConfirm(p)} style={{...S.btnSmall, color:'#c53030', borderColor:'#c53030'}}>Delete</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── PRACTICES PAGE ────────────────────────────────────────────────────────────
+function PracticeDetailPage({ uid, practiceId, setPage }) {
+  const [practice, setPractice] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({});
+  const [parks, setParks] = useState([]);
+  const [showParkDropdown, setShowParkDropdown] = useState(false);
+
+  useEffect(() => {
+    practicesCol(uid).doc(practiceId).get().then(d => {
+      if (d.exists) { setPractice({id:d.id,...d.data()}); setF({...d.data()}); }
+      setLoading(false);
+    });
+    parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
+  }, [uid, practiceId]);
+
+  const upd = (k,v) => setF(x=>({...x,[k]:v}));
+  const dayOfWeek = date => { if (!date) return ''; const d = new Date(date+'T12:00:00'); return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]; };
+
+  const save = async () => {
+    await practicesCol(uid).doc(practiceId).update(f);
+    setPractice({...practice,...f});
+    setEditing(false);
+  };
+
+  const deletePractice = async () => {
+    await practicesCol(uid).doc(practiceId).delete();
+    setPage('practices');
+  };
+
+  if (loading) return <div style={{padding:24,color:'var(--muted)'}}>Loading...</div>;
+  if (!practice) return <div style={{padding:24,color:'var(--muted)'}}>Practice not found.</div>;
+
+  const p = editing ? f : practice;
+
+  return (
+    <div style={{maxWidth:700, margin:'0 auto', padding:'16px 12px'}}>
+      <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:16}}>
+        <button onClick={() => setPage('practices')} style={{...S.btnSecondary, padding:'6px 10px'}}>← Back</button>
+        <h2 style={{margin:0, fontSize:18, fontWeight:700, color:'var(--text)', flex:1}}>Practice Detail</h2>
+        {!editing && <button onClick={() => setEditing(true)} style={S.btnSecondary}>Edit</button>}
+        {!editing && <button onClick={deletePractice} style={{...S.btnSecondary, color:'#c53030', borderColor:'#c53030'}}>Delete</button>}
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>Practice Details</div>
+        {editing ? (
+          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+            <div>
+              <label style={S.label}>Date</label>
+              <input type="date" style={S.input} value={f.date||''} onChange={e => upd('date', e.target.value)}/>
+            </div>
+            <div>
+              <label style={S.label}>Park / Location</label>
+              <div style={{position:'relative'}}>
+                <input style={S.input} value={f.park||''}
+                  onChange={e => { upd('park', e.target.value); setShowParkDropdown(true); }}
+                  onFocus={() => setShowParkDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowParkDropdown(false), 150)}
+                  placeholder="e.g. Christie Pits Diamond 1"/>
+                {showParkDropdown && parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).length > 0 && (
+                  <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
+                    {parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).map(pk => (
+                      <div key={pk.id} onMouseDown={() => { upd('park', pk.name); setShowParkDropdown(false); }}
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
+                        onMouseEnter={e => e.target.style.background='var(--hover)'}
+                        onMouseLeave={e => e.target.style.background='transparent'}>
+                        {pk.name}{pk.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{pk.fieldType}</span> : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{display:'flex', flexDirection:'column', gap:6, marginTop:8}}>
+            <div style={{display:'flex', gap:8}}><span style={{color:'var(--muted)', fontSize:13, minWidth:80}}>Date</span><span style={{color:'var(--text)', fontSize:14}}>{practice.date ? new Date(practice.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) : '—'}</span></div>
+            <div style={{display:'flex', gap:8}}><span style={{color:'var(--muted)', fontSize:13, minWidth:80}}>Park</span><span style={{color:'var(--text)', fontSize:14}}>{practice.park||'—'}</span></div>
+          </div>
+        )}
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>Notes</div>
+        {editing ? (
+          <div style={{display:'flex', flexDirection:'column', gap:14}}>
+            {[['General Notes','notesGeneral','General observations...'],['Batting','notesBatting','Batting notes...'],['Fielding','notesFielding','Fielding notes...'],['Throwing','notesThrowing','Throwing notes...']].map(([label,key,ph]) => (
+              <div key={key}>
+                <label style={{...S.label, display:'block', marginBottom:6}}>{label}</label>
+                <textarea style={{...S.input, height:75, resize:'vertical'}} value={f[key]||''} onChange={e => upd(key, e.target.value)} placeholder={ph}/>
+              </div>
+            ))}
+            <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+              <button onClick={() => { setEditing(false); setF({...practice}); }} style={S.btnSecondary}>Cancel</button>
+              <button onClick={save} style={S.btnPrimary}>Save Changes</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{display:'flex', flexDirection:'column', gap:12, marginTop:8}}>
+            {[['General Notes','notesGeneral'],['Batting','notesBatting'],['Fielding','notesFielding'],['Throwing','notesThrowing']].map(([label,key]) => practice[key] ? (
+              <div key={key}>
+                <div style={{...S.label, marginBottom:3}}>{label}</div>
+                <p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{practice[key]}</p>
+              </div>
+            ) : null)}
+            {!practice.notesGeneral && !practice.notesBatting && !practice.notesFielding && !practice.notesThrowing &&
+              <p style={S.muted}>No notes recorded.</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PracticesPage({ uid, setPage, setPracticeId }) {
+  const [practices, setPractices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [parks, setParks] = useState([]);
+  const [showParkDropdown, setShowParkDropdown] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterPark, setFilterPark] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const today = new Date().toISOString().split('T')[0];
+  const [f, setF] = useState({ date:today, park:'', notesGeneral:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
+
+  const upd = (k,v) => setF(x=>({...x,[k]:v}));
+  const dayOfWeek = date => { if (!date) return ''; const d = new Date(date+'T12:00:00'); return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]; };
+
+  useEffect(() => {
+    practicesCol(uid).orderBy('date','desc').onSnapshot(s => {
+      setPractices(s.docs.map(d => ({id:d.id,...d.data()})));
+      setLoading(false);
+    });
+    parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
+  }, [uid]);
+
+  const save = async () => {
+    await practicesCol(uid).add({ ...f, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    setShowForm(false);
+    setF({ date:today, park:'', notesGeneral:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
+  };
+
+  const openDetail = (id) => { setPracticeId(id); setPage('practice-detail'); };
+
+  const allParks = [...new Set(practices.map(p => p.park).filter(Boolean))].sort();
+  const allMonths = [...new Set(practices.map(p => p.date ? p.date.slice(0,7) : '').filter(Boolean))].sort().reverse();
+
+  const filtered = practices.filter(p => {
+    const matchSearch = !search || [p.park, p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].some(v => v && v.toLowerCase().includes(search.toLowerCase()));
+    const matchPark = !filterPark || p.park === filterPark;
+    const matchMonth = !filterMonth || (p.date && p.date.startsWith(filterMonth));
+    return matchSearch && matchPark && matchMonth;
+  });
+
+  if (loading) return <div style={{padding:24,color:'var(--muted)'}}>Loading...</div>;
+
+  return (
+    <div style={{maxWidth:700, margin:'0 auto', padding:'16px 12px'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
+        <h2 style={{margin:0, fontSize:20, fontWeight:700, color:'var(--text)'}}>Practices</h2>
+        <button onClick={() => setShowForm(v => !v)} style={S.btnPrimary}>{showForm ? 'Cancel' : '+ Add Practice'}</button>
+      </div>
+
+      {showForm && (
+        <div style={{...S.card, marginBottom:16}}>
+          <div style={{...S.cardTitle, marginBottom:14}}>Record Practice</div>
+          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+            <div>
+              <label style={S.label}>Date</label>
+              <input type="date" style={S.input} value={f.date} onChange={e => upd('date', e.target.value)}/>
+              {f.date && <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>{dayOfWeek(f.date)}</div>}
+            </div>
+            <div>
+              <label style={S.label}>Park / Location</label>
+              <div style={{position:'relative'}}>
+                <input style={S.input} value={f.park}
+                  onChange={e => { upd('park', e.target.value); setShowParkDropdown(true); }}
+                  onFocus={() => setShowParkDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowParkDropdown(false), 150)}
+                  placeholder="e.g. Christie Pits Diamond 1"/>
+                {showParkDropdown && parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).length > 0 && (
+                  <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
+                    {parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).map(pk => (
+                      <div key={pk.id} onMouseDown={() => { upd('park', pk.name); setShowParkDropdown(false); }}
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
+                        onMouseEnter={e => e.target.style.background='var(--hover)'}
+                        onMouseLeave={e => e.target.style.background='transparent'}>
+                        {pk.name}{pk.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{pk.fieldType}</span> : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{borderTop:'1px solid var(--border)', paddingTop:12}}>
+              <div style={{...S.cardTitle, fontSize:14, marginBottom:12}}>Notes</div>
+              {[['General Notes','notesGeneral','General observations...'],['Batting','notesBatting','Batting notes...'],['Fielding','notesFielding','Fielding notes...'],['Throwing','notesThrowing','Throwing notes...']].map(([label,key,ph]) => (
+                <div key={key} style={{marginBottom:12}}>
+                  <label style={{...S.label, display:'block', marginBottom:6}}>{label}</label>
+                  <textarea style={{...S.input, height:65, resize:'vertical'}} value={f[key]||''} onChange={e => upd(key, e.target.value)} placeholder={ph}/>
+                </div>
+              ))}
+            </div>
+            <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+              <button onClick={() => setShowForm(false)} style={S.btnSecondary}>Cancel</button>
+              <button onClick={save} style={S.btnPrimary}>Save Practice</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filters + Search */}
+      <div style={{...S.card, marginBottom:16, padding:'12px 14px'}}>
+        <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
+          <input style={{...S.input, flex:'1 1 160px', marginBottom:0}} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search notes..."/>
+          <select style={{...S.input, flex:'1 1 120px', marginBottom:0}} value={filterPark} onChange={e => setFilterPark(e.target.value)}>
+            <option value="">All Parks</option>
+            {allParks.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select style={{...S.input, flex:'1 1 120px', marginBottom:0}} value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
+            <option value="">All Months</option>
+            {allMonths.map(m => <option key={m} value={m}>{new Date(m+'-01T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})}</option>)}
+          </select>
+          {(search || filterPark || filterMonth) && <button onClick={() => { setSearch(''); setFilterPark(''); setFilterMonth(''); }} style={S.btnSecondary}>Clear</button>}
+        </div>
+      </div>
+
+      {filtered.length === 0 && <div style={S.empty}><p>{practices.length === 0 ? 'No practices recorded yet.' : 'No practices match your filters.'}</p></div>}
+
+      {filtered.map(p => (
+        <div key={p.id} onClick={() => openDetail(p.id)}
+          style={{...S.card, marginBottom:10, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center'}}
+          onMouseEnter={e => e.currentTarget.style.borderColor='var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor='var(--border)'}>
+          <div>
+            <div style={{fontWeight:600, fontSize:15, color:'var(--text)'}}>{p.date ? new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : 'No date'}</div>
+            {p.park && <div style={{fontSize:13, color:'var(--muted)', marginTop:2}}>{p.park}</div>}
+            {(p.notesGeneral || p.notesBatting || p.notesFielding || p.notesThrowing) && (
+              <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>
+                {[p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].filter(Boolean).length} note section{[p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].filter(Boolean).length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <span style={{color:'var(--muted)', fontSize:18}}>›</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 // ─── SHARED HELPERS (filters + aggregation) ────────────────────────────────────
 function useAllData(uid) {
@@ -3881,7 +4297,7 @@ function getPageFromHash() {
   const hash = window.location.hash.slice(1); // remove #
   if (!hash) return { page: 'games', gameId: null };
   if (hash.startsWith('game/')) return { page: 'game-detail', gameId: hash.slice(5) };
-  const validPages = ['games','stats','gamelog','trends','seasons','bats','profile','new-game'];
+  const validPages = ['games','practices','stats','gamelog','trends','seasons','parks','bats','profile','new-game','practice-detail'];
   if (validPages.includes(hash)) return { page: hash, gameId: null };
   return { page: 'games', gameId: null };
 }
@@ -3997,12 +4413,27 @@ function App() {
         {page === 'gamelog'     && <GameLogPage uid={uid} setPage={navigate} setGameId={setGameId}/>}
         {page === 'trends'      && <TrendsPage uid={uid}/>}
         {page === 'seasons'     && <SeasonsPage uid={uid}/>}
+        {page === 'practices'   && <PracticesPage uid={uid} setPage={navigate} setPracticeId={setPracticeId}/>}
+        {page === 'practice-detail' && <PracticeDetailPage key={practiceId} uid={uid} practiceId={practiceId} setPage={navigate}/>}
+        {page === 'parks'       && <ParksPage uid={uid}/>}
       </div>
     </div>
   );
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjEnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
+    var code = atob(b64);
+    var blob = new Blob([code], {type: 'application/javascript'});
+    var url = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(url)
+      .then(function() { URL.revokeObjectURL(url); })
+      .catch(function(e) { console.log('SW failed:', e); });
+  }
 </script>
 </body>
 </html>
