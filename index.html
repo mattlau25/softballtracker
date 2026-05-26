@@ -863,6 +863,9 @@ function Sidebar({ page, setPage, user, pageToPath }) {
       <div className="nav-user" style={{display:'none'}}>
         &nbsp;
       </div>
+      <div style={{padding:'10px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
+        v2.45
+      </div>
     </nav>
   );
 }
@@ -1982,6 +1985,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
   const [loading, setLoading] = useState(true);
   const [editingGame, setEditingGame] = useState(false);
   const [gameForm, setGameForm] = useState(null);
+  const [parks, setParks] = useState([]);
+  const [showEditParkDropdown, setShowEditParkDropdown] = useState(false);
   const [savingGame, setSavingGame] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState('spray');
   const [showOuts, setShowOuts] = useState(true);
@@ -2056,6 +2061,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
     loadGame(); loadABs(); loadFielding();
     batsCol(uid).get().then(s => setBats(s.docs.map(d=>({id:d.id,...d.data()}))));
     userDoc(uid).get().then(d => { if (d.exists && d.data().profile) setProfile(d.data().profile); });
+    parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
   }, [uid, gameId]);
 
   const delAB = async id => {
@@ -2174,7 +2180,25 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             </div>
             <div style={{...S.formGroup, gridColumn:'1/-1'}}>
               <label style={S.label}>Park / Location</label>
-              <input style={S.input} value={gameForm.park||''} onChange={e=>updGame('park',e.target.value)}/>
+              <div style={{position:'relative'}}>
+                <input style={S.input} value={gameForm.park||''}
+                  onChange={e => { updGame('park', e.target.value); setShowEditParkDropdown(true); }}
+                  onFocus={() => setShowEditParkDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowEditParkDropdown(false), 150)}
+                  placeholder="e.g. Christie Pits Diamond 1"/>
+                {showEditParkDropdown && parks.filter(p => p.name.toLowerCase().includes((gameForm.park||'').toLowerCase())).length > 0 && (
+                  <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
+                    {parks.filter(p => p.name.toLowerCase().includes((gameForm.park||'').toLowerCase())).map(p => (
+                      <div key={p.id} onMouseDown={() => { updGame('park', p.name); setShowEditParkDropdown(false); }}
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
+                        onMouseEnter={e => e.target.style.background='var(--hover)'}
+                        onMouseLeave={e => e.target.style.background='transparent'}>
+                        {p.name}{p.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{p.fieldType}</span> : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div style={S.formGroup}>
               <label style={S.label}>My Score</label>
@@ -2252,7 +2276,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
           {/* Line 2: Date · Time · Day/Night · Park · Home/Away */}
           <div style={{...S.listSub, marginBottom: (game.league || game.season) ? 10 : 0}}>
-            {fmtDate(game.date)}{game.time ? ` · ${fmtTime(game.time)}` : ''}{game.dayNight ? ` · ${game.dayNight}` : ''}{game.park ? ` · ${game.park}` : ''}{game.homeAway ? ` · ${game.homeAway}` : ''}
+            {fmtDate(game.date)}{game.time ? ` · ${fmtTime(game.time)}` : ''}{game.dayNight ? ` · ${game.dayNight}` : ''}{game.park ? ` · ${game.park}` : ''}{(() => { const matched = parks.find(p => p.name === game.park); return matched && matched.fieldType ? <span style={{fontSize:12, color:'var(--muted)', marginLeft:4}}>({matched.fieldType})</span> : null; })()}{game.homeAway ? ` · ${game.homeAway}` : ''}
           </div>
           {/* Line 3: League · Tier [gap] Season */}
           {(game.league || game.season) && (
@@ -3121,8 +3145,10 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
   const dayOfWeek = date => { if (!date) return ''; const d = new Date(date+'T12:00:00'); return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]; };
 
   useEffect(() => {
-    practicesCol(uid).orderBy('date','desc').onSnapshot(s => {
-      setPractices(s.docs.map(d => ({id:d.id,...d.data()})));
+    practicesCol(uid).onSnapshot(s => {
+      const docs = s.docs.map(d => ({id:d.id,...d.data()}));
+      docs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      setPractices(docs);
       setLoading(false);
     });
     parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
