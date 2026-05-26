@@ -864,7 +864,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div style={{padding:'10px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v2.45
+        v2.46
       </div>
     </nav>
   );
@@ -2190,9 +2190,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                   <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                     {parks.filter(p => p.name.toLowerCase().includes((gameForm.park||'').toLowerCase())).map(p => (
                       <div key={p.id} onMouseDown={() => { updGame('park', p.name); setShowEditParkDropdown(false); }}
-                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
-                        onMouseEnter={e => e.target.style.background='var(--hover)'}
-                        onMouseLeave={e => e.target.style.background='transparent'}>
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)', background:'var(--surface)'}}
+                        onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
                         {p.name}{p.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{p.fieldType}</span> : ''}
                       </div>
                     ))}
@@ -2276,7 +2276,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
           {/* Line 2: Date · Time · Day/Night · Park · Home/Away */}
           <div style={{...S.listSub, marginBottom: (game.league || game.season) ? 10 : 0}}>
-            {fmtDate(game.date)}{game.time ? ` · ${fmtTime(game.time)}` : ''}{game.dayNight ? ` · ${game.dayNight}` : ''}{game.park ? ` · ${game.park}` : ''}{(() => { const matched = parks.find(p => p.name === game.park); return matched && matched.fieldType ? <span style={{fontSize:12, color:'var(--muted)', marginLeft:4}}>({matched.fieldType})</span> : null; })()}{game.homeAway ? ` · ${game.homeAway}` : ''}
+            {fmtDate(game.date)}{game.time ? ` · ${fmtTime(game.time)}` : ''}{game.dayNight ? ` · ${game.dayNight}` : ''}{game.park ? ` · ${game.park}` : ''}{(() => { const matched = parks.find(p => p.name === game.park); return matched && matched.fieldType ? <span style={{fontSize:12, color:'var(--muted)', marginLeft:4}}>- {matched.fieldType}</span> : null; })()}{game.homeAway ? ` · ${game.homeAway}` : ''}
           </div>
           {/* Line 3: League · Tier [gap] Season */}
           {(game.league || game.season) && (
@@ -2287,10 +2287,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           )}
           {(game.comments || game.notesBatting || game.notesFielding || game.notesThrowing) && (
             <div style={{marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, display:'flex', flexDirection:'column', gap:10}}>
-              {game.comments && <div><div style={{...S.label, marginBottom:3}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.comments}</p></div>}
-              {game.notesBatting && <div><div style={{...S.label, marginBottom:3}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesBatting}</p></div>}
-              {game.notesFielding && <div><div style={{...S.label, marginBottom:3}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesFielding}</p></div>}
-              {game.notesThrowing && <div><div style={{...S.label, marginBottom:3}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesThrowing}</p></div>}
+              {game.comments && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.comments}</p></div>}
+              {game.notesBatting && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesBatting}</p></div>}
+              {game.notesFielding && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesFielding}</p></div>}
+              {game.notesThrowing && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesThrowing}</p></div>}
             </div>
           )}
         </div>
@@ -3078,9 +3078,9 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
                   <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                     {parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).map(pk => (
                       <div key={pk.id} onMouseDown={() => { upd('park', pk.name); setShowParkDropdown(false); }}
-                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
-                        onMouseEnter={e => e.target.style.background='var(--hover)'}
-                        onMouseLeave={e => e.target.style.background='transparent'}>
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)', background:'var(--surface)'}}
+                        onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
                         {pk.name}{pk.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{pk.fieldType}</span> : ''}
                       </div>
                     ))}
@@ -3202,9 +3202,9 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
                   <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                     {parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).map(pk => (
                       <div key={pk.id} onMouseDown={() => { upd('park', pk.name); setShowParkDropdown(false); }}
-                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
-                        onMouseEnter={e => e.target.style.background='var(--hover)'}
-                        onMouseLeave={e => e.target.style.background='transparent'}>
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)', background:'var(--surface)'}}
+                        onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
                         {pk.name}{pk.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{pk.fieldType}</span> : ''}
                       </div>
                     ))}
