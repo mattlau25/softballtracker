@@ -864,7 +864,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div style={{padding:'10px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v2.46
+        v2.47
       </div>
     </nav>
   );
@@ -1453,15 +1453,15 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                   </div>
                   {g.season && <div style={{...S.listSub, marginTop:2}}>{g.season}</div>}
                   {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}{s.r>0?` · ${s.r} R`:''}</div>}
-                  {(g.comments || g.notesBatting || g.notesFielding || g.notesThrowing) && (
-                    <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:3}}>
-                      {g.comments && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Game Notes: </span>{g.comments}</div>}
-                      {g.notesBatting && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Batting: </span>{g.notesBatting}</div>}
-                      {g.notesFielding && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Fielding: </span>{g.notesFielding}</div>}
-                      {g.notesThrowing && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Throwing: </span>{g.notesThrowing}</div>}
+
+                  {showComments && (g.comments || g.notesBatting || g.notesFielding || g.notesThrowing) && (
+                    <div style={{borderTop:'1px solid var(--border)', paddingTop:10, marginTop:6, display:'flex', flexDirection:'column', gap:10}}>
+                      {g.comments && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Game Notes</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.comments}</p></div>}
+                      {g.notesBatting && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Batting</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.notesBatting}</p></div>}
+                      {g.notesFielding && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Fielding</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.notesFielding}</p></div>}
+                      {g.notesThrowing && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Throwing</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{g.notesThrowing}</p></div>}
                     </div>
                   )}
-                  {showComments && g.comments && <div style={{fontSize:12, color:'var(--muted)', marginTop:6, fontStyle:'italic', whiteSpace:'pre-wrap', borderTop:'1px solid var(--border)', paddingTop:6}}>{g.comments}</div>}
                 </div>
                 <span style={{color:'var(--muted)', fontSize:16, flexShrink:0}}>›</span>
               </a>
@@ -2963,7 +2963,7 @@ function ParksPage({ uid }) {
   if (loading) return <div style={{padding:24,color:'var(--muted)'}}>Loading...</div>;
 
   return (
-    <div style={{maxWidth:600, margin:'0 auto', padding:'16px 12px'}}>
+    <div className="page-content">
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
         <h2 style={{margin:0, fontSize:20, fontWeight:700, color:'var(--text)'}}>Parks</h2>
         <button onClick={openAdd} style={S.btnPrimary}>+ Add Park</button>
@@ -3149,6 +3149,13 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
   const [search, setSearch] = useState('');
   const [filterPark, setFilterPark] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [showNotes, setShowNotes] = useState(() => {
+    try { return localStorage.getItem('practicesShowNotes') === 'true'; } catch { return false; }
+  });
+  const toggleShowNotes = (val) => {
+    setShowNotes(val);
+    try { localStorage.setItem('practicesShowNotes', val ? 'true' : 'false'); } catch {}
+  };
   const today = new Date().toISOString().split('T')[0];
   const [f, setF] = useState({ date:today, park:'', notesGeneral:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
 
@@ -3194,10 +3201,16 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
   if (loading) return <div style={{padding:24,color:'var(--muted)'}}>Loading...</div>;
 
   return (
-    <div style={{maxWidth:700, margin:'0 auto', padding:'16px 12px'}}>
+    <div className="page-content">
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
         <h2 style={{margin:0, fontSize:20, fontWeight:700, color:'var(--text)'}}>Practices</h2>
-        <button onClick={() => setShowForm(v => !v)} style={S.btnPrimary}>{showForm ? 'Cancel' : '+ Add Practice'}</button>
+        <div style={{display:'flex', alignItems:'center', gap:12}}>
+          <label style={{display:'flex', alignItems:'center', gap:6, fontSize:13, color:'var(--muted)', cursor:'pointer'}}>
+            <input type="checkbox" checked={showNotes} onChange={e => toggleShowNotes(e.target.checked)} style={{cursor:'pointer'}}/>
+            Show Notes
+          </label>
+          <button onClick={() => setShowForm(v => !v)} style={S.btnPrimary}>{showForm ? 'Cancel' : '+ Add Practice'}</button>
+        </div>
       </div>
 
       {showForm && (
@@ -3269,9 +3282,12 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
           <div>
             <div style={{fontWeight:600, fontSize:15, color:'var(--text)'}}>{p.date ? new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : 'No date'}</div>
             {p.park && <div style={{fontSize:13, color:'var(--muted)', marginTop:2}}>{p.park}</div>}
-            {(p.notesGeneral || p.notesBatting || p.notesFielding || p.notesThrowing) && (
-              <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>
-                {[p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].filter(Boolean).length} note section(s)
+            {showNotes && (p.notesGeneral || p.notesBatting || p.notesFielding || p.notesThrowing) && (
+              <div style={{borderTop:'1px solid var(--border)', paddingTop:8, marginTop:8, display:'flex', flexDirection:'column', gap:8}}>
+                {p.notesGeneral && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>General Notes</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesGeneral}</p></div>}
+                {p.notesBatting && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Batting</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesBatting}</p></div>}
+                {p.notesFielding && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Fielding</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesFielding}</p></div>}
+                {p.notesThrowing && <div><div style={{fontSize:10, fontWeight:500, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3}}>Throwing</div><p style={{fontSize:12, color:'var(--muted)', fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{p.notesThrowing}</p></div>}
               </div>
             )}
           </div>
