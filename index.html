@@ -1453,6 +1453,14 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                   </div>
                   {g.season && <div style={{...S.listSub, marginTop:2}}>{g.season}</div>}
                   {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}{s.r>0?` · ${s.r} R`:''}</div>}
+                  {(game.comments || game.notesBatting || game.notesFielding || game.notesThrowing) && (
+                    <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
+                      {game.comments && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Game Notes: </span>{game.comments}</div>}
+                      {game.notesBatting && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Batting: </span>{game.notesBatting}</div>}
+                      {game.notesFielding && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Fielding: </span>{game.notesFielding}</div>}
+                      {game.notesThrowing && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Throwing: </span>{game.notesThrowing}</div>}
+                    </div>
+                  )}
                   {showComments && g.comments && <div style={{fontSize:12, color:'var(--muted)', marginTop:6, fontStyle:'italic', whiteSpace:'pre-wrap', borderTop:'1px solid var(--border)', paddingTop:6}}>{g.comments}</div>}
                 </div>
                 <span style={{color:'var(--muted)', fontSize:16, flexShrink:0}}>›</span>
@@ -3149,6 +3157,9 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
       const docs = s.docs.map(d => ({id:d.id,...d.data()}));
       docs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
       setPractices(docs);
+      setLoading(false);
+    }, err => {
+      console.error('Practices load error:', err);
       setLoading(false);
     });
     parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
