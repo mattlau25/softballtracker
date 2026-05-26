@@ -1454,7 +1454,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                   {g.season && <div style={{...S.listSub, marginTop:2}}>{g.season}</div>}
                   {abs.length > 0 && <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{s.h}-for-{s.ab} · {calcAVG(s.h,s.ab)}{s.hr>0?` · ${s.hr} HR`:''}{s.rbi>0?` · ${s.rbi} RBI`:''}{s.r>0?` · ${s.r} R`:''}</div>}
                   {(g.comments || g.notesBatting || g.notesFielding || g.notesThrowing) && (
-                    <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
+                    <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:3}}>
                       {g.comments && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Game Notes: </span>{g.comments}</div>}
                       {g.notesBatting && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Batting: </span>{g.notesBatting}</div>}
                       {g.notesFielding && <div style={{fontSize:11,color:'var(--muted)'}}><span style={{fontWeight:600}}>Fielding: </span>{g.notesFielding}</div>}
@@ -1478,7 +1478,6 @@ function NewGamePage({ uid, setPage, setGameId }) {
   const today = new Date().toISOString().split('T')[0];
   const [f, setF] = useState({ date:today, time:'', dayNight:'', park:'', homeAway:'', opponent:'', myScore:'', oppScore:'', teamName:'', league:'', tier:'', season:'', comments:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
   const [parks, setParks] = useState([]);
-  const [parkSearch, setParkSearch] = useState('');
   const [showParkDropdown, setShowParkDropdown] = useState(false);
   const [seasons, setSeasons] = useState([]);
   const [selectedSeasonId, setSelectedSeasonId] = useState('');
@@ -1549,7 +1548,7 @@ function NewGamePage({ uid, setPage, setGameId }) {
             <label style={S.label}>Park / Location</label>
             <div style={{position:'relative'}}>
               <input style={S.input} value={f.park}
-                onChange={e => { upd('park', e.target.value); setParkSearch(e.target.value); setShowParkDropdown(true); }}
+                onChange={e => { upd('park', e.target.value); setShowParkDropdown(true); }}
                 onFocus={() => setShowParkDropdown(true)}
                 onBlur={() => setTimeout(() => setShowParkDropdown(false), 150)}
                 placeholder="e.g. Christie Pits Diamond 1"/>
@@ -1557,9 +1556,7 @@ function NewGamePage({ uid, setPage, setGameId }) {
                 <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                   {parks.filter(p => p.name.toLowerCase().includes((f.park||'').toLowerCase())).map(p => (
                     <div key={p.id} onMouseDown={() => { upd('park', p.name); setShowParkDropdown(false); }}
-                      style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}
-                      onMouseEnter={e => e.target.style.background='var(--hover)'}
-                      onMouseLeave={e => e.target.style.background='transparent'}>
+                      style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}>
                       {p.name}{p.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{p.fieldType}</span> : ''}
                     </div>
                   ))}
@@ -2198,9 +2195,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
                   <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                     {parks.filter(p => p.name.toLowerCase().includes((gameForm.park||'').toLowerCase())).map(p => (
                       <div key={p.id} onMouseDown={() => { updGame('park', p.name); setShowEditParkDropdown(false); }}
-                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)', background:'var(--surface)'}}
-                        onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
-                        onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}>
                         {p.name}{p.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{p.fieldType}</span> : ''}
                       </div>
                     ))}
@@ -2294,11 +2289,11 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             </div>
           )}
           {(game.comments || game.notesBatting || game.notesFielding || game.notesThrowing) && (
-            <div style={{marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, display:'flex', flexDirection:'column', gap:10}}>
-              {game.comments && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.comments}</p></div>}
-              {game.notesBatting && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesBatting}</p></div>}
-              {game.notesFielding && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesFielding}</p></div>}
-              {game.notesThrowing && <div style={{marginBottom:14}}><div style={{...S.label, marginBottom:5}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesThrowing}</p></div>}
+            <div style={{marginTop:12, borderTop:'1px solid var(--border)', paddingTop:10, display:'flex', flexDirection:'column', gap:14}}>
+              {game.comments && <div><div style={{...S.label, marginBottom:5}}>Game Notes</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.comments}</p></div>}
+              {game.notesBatting && <div><div style={{...S.label, marginBottom:5}}>Batting</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesBatting}</p></div>}
+              {game.notesFielding && <div><div style={{...S.label, marginBottom:5}}>Fielding</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesFielding}</p></div>}
+              {game.notesThrowing && <div><div style={{...S.label, marginBottom:5}}>Throwing</div><p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{game.notesThrowing}</p></div>}
             </div>
           )}
         </div>
@@ -2938,10 +2933,12 @@ function ParksPage({ uid }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
-    parksCol(uid).orderBy('name','asc').onSnapshot(s => {
-      setParks(s.docs.map(d => ({id:d.id,...d.data()})));
+    parksCol(uid).onSnapshot(s => {
+      const docs = s.docs.map(d => ({id:d.id,...d.data()}));
+      docs.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+      setParks(docs);
       setLoading(false);
-    });
+    }, err => { console.error('Parks error:', err); setLoading(false); });
   }, [uid]);
 
   const openAdd = () => { setF({ name:'', fieldType:'' }); setEditPark(null); setShowForm(true); };
@@ -2973,7 +2970,7 @@ function ParksPage({ uid }) {
       </div>
 
       {showForm && (
-        <div style={{...S.card, marginBottom:16, border:'1px solid var(--border)'}}>
+        <div style={{...S.card, marginBottom:16}}>
           <div style={{...S.cardTitle, marginBottom:14}}>{editPark ? 'Edit Park' : 'Add Park'}</div>
           <div style={{...S.formGroup, marginBottom:12}}>
             <label style={S.label}>Park Name *</label>
@@ -3030,16 +3027,23 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
   const [parks, setParks] = useState([]);
   const [showParkDropdown, setShowParkDropdown] = useState(false);
 
+  const dayLabel = date => {
+    if (!date) return '';
+    const d = new Date(date + 'T12:00:00');
+    return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+  };
+
   useEffect(() => {
     practicesCol(uid).doc(practiceId).get().then(d => {
       if (d.exists) { setPractice({id:d.id,...d.data()}); setF({...d.data()}); }
       setLoading(false);
-    });
-    parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
+    }).catch(err => { console.error(err); setLoading(false); });
+    parksCol(uid).onSnapshot(s => {
+      setParks(s.docs.map(d => ({id:d.id,...d.data()})));
+    }, () => {});
   }, [uid, practiceId]);
 
   const upd = (k,v) => setF(x=>({...x,[k]:v}));
-  const dayOfWeek = date => { if (!date) return ''; const d = new Date(date+'T12:00:00'); return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]; };
 
   const save = async () => {
     await practicesCol(uid).doc(practiceId).update(f);
@@ -3060,7 +3064,7 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
   return (
     <div style={{maxWidth:700, margin:'0 auto', padding:'16px 12px'}}>
       <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:16}}>
-        <button onClick={() => setPage('practices')} style={{...S.btnSecondary, padding:'6px 10px'}}>← Back</button>
+        <button onClick={() => setPage('practices')} style={{...S.btnSecondary, padding:'6px 10px'}}>Back</button>
         <h2 style={{margin:0, fontSize:18, fontWeight:700, color:'var(--text)', flex:1}}>Practice Detail</h2>
         {!editing && <button onClick={() => setEditing(true)} style={S.btnSecondary}>Edit</button>}
         {!editing && <button onClick={deletePractice} style={{...S.btnSecondary, color:'#c53030', borderColor:'#c53030'}}>Delete</button>}
@@ -3069,10 +3073,11 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
       <div style={S.card}>
         <div style={S.cardTitle}>Practice Details</div>
         {editing ? (
-          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+          <div style={{display:'flex', flexDirection:'column', gap:12, marginTop:10}}>
             <div>
               <label style={S.label}>Date</label>
               <input type="date" style={S.input} value={f.date||''} onChange={e => upd('date', e.target.value)}/>
+              {f.date && <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>{dayLabel(f.date)}</div>}
             </div>
             <div>
               <label style={S.label}>Park / Location</label>
@@ -3086,9 +3091,7 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
                   <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                     {parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).map(pk => (
                       <div key={pk.id} onMouseDown={() => { upd('park', pk.name); setShowParkDropdown(false); }}
-                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)', background:'var(--surface)'}}
-                        onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
-                        onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}>
                         {pk.name}{pk.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{pk.fieldType}</span> : ''}
                       </div>
                     ))}
@@ -3098,7 +3101,7 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
             </div>
           </div>
         ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:6, marginTop:8}}>
+          <div style={{display:'flex', flexDirection:'column', gap:8, marginTop:10}}>
             <div style={{display:'flex', gap:8}}><span style={{color:'var(--muted)', fontSize:13, minWidth:80}}>Date</span><span style={{color:'var(--text)', fontSize:14}}>{practice.date ? new Date(practice.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) : '—'}</span></div>
             <div style={{display:'flex', gap:8}}><span style={{color:'var(--muted)', fontSize:13, minWidth:80}}>Park</span><span style={{color:'var(--text)', fontSize:14}}>{practice.park||'—'}</span></div>
           </div>
@@ -3108,7 +3111,7 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
       <div style={S.card}>
         <div style={S.cardTitle}>Notes</div>
         {editing ? (
-          <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          <div style={{display:'flex', flexDirection:'column', gap:14, marginTop:10}}>
             {[['General Notes','notesGeneral','General observations...'],['Batting','notesBatting','Batting notes...'],['Fielding','notesFielding','Fielding notes...'],['Throwing','notesThrowing','Throwing notes...']].map(([label,key,ph]) => (
               <div key={key}>
                 <label style={{...S.label, display:'block', marginBottom:6}}>{label}</label>
@@ -3121,10 +3124,10 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
             </div>
           </div>
         ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:12, marginTop:8}}>
+          <div style={{display:'flex', flexDirection:'column', gap:14, marginTop:10}}>
             {[['General Notes','notesGeneral'],['Batting','notesBatting'],['Fielding','notesFielding'],['Throwing','notesThrowing']].map(([label,key]) => practice[key] ? (
               <div key={key}>
-                <div style={{...S.label, marginBottom:3}}>{label}</div>
+                <div style={{...S.label, marginBottom:5}}>{label}</div>
                 <p style={{...S.muted, fontStyle:'italic', whiteSpace:'pre-wrap', margin:0}}>{practice[key]}</p>
               </div>
             ) : null)}
@@ -3150,19 +3153,24 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
   const [f, setF] = useState({ date:today, park:'', notesGeneral:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
 
   const upd = (k,v) => setF(x=>({...x,[k]:v}));
-  const dayOfWeek = date => { if (!date) return ''; const d = new Date(date+'T12:00:00'); return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]; };
+
+  const dayLabel = date => {
+    if (!date) return '';
+    const d = new Date(date + 'T12:00:00');
+    return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+  };
 
   useEffect(() => {
-    practicesCol(uid).onSnapshot(s => {
+    const unsub = practicesCol(uid).onSnapshot(s => {
       const docs = s.docs.map(d => ({id:d.id,...d.data()}));
       docs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
       setPractices(docs);
       setLoading(false);
-    }, err => {
-      console.error('Practices load error:', err);
-      setLoading(false);
-    });
-    parksCol(uid).orderBy('name','asc').get().then(p => setParks(p.docs.map(d => ({id:d.id,...d.data()}))));
+    }, err => { console.error('Practices error:', err); setLoading(false); });
+    parksCol(uid).onSnapshot(s => {
+      setParks(s.docs.map(d => ({id:d.id,...d.data()})));
+    }, () => {});
+    return () => unsub();
   }, [uid]);
 
   const save = async () => {
@@ -3171,9 +3179,9 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
     setF({ date:today, park:'', notesGeneral:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
   };
 
-  const openDetail = (id) => { setPracticeId(id); setPage('practice-detail'); };
+  const openDetail = id => { setPracticeId(id); setPage('practice-detail'); };
 
-  const allParks = [...new Set(practices.map(p => p.park).filter(Boolean))].sort();
+  const allParkNames = [...new Set(practices.map(p => p.park).filter(Boolean))].sort();
   const allMonths = [...new Set(practices.map(p => p.date ? p.date.slice(0,7) : '').filter(Boolean))].sort().reverse();
 
   const filtered = practices.filter(p => {
@@ -3199,7 +3207,7 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
             <div>
               <label style={S.label}>Date</label>
               <input type="date" style={S.input} value={f.date} onChange={e => upd('date', e.target.value)}/>
-              {f.date && <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>{dayOfWeek(f.date)}</div>}
+              {f.date && <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>{dayLabel(f.date)}</div>}
             </div>
             <div>
               <label style={S.label}>Park / Location</label>
@@ -3213,9 +3221,7 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
                   <div style={{position:'absolute', top:'100%', left:0, right:0, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, zIndex:100, maxHeight:180, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
                     {parks.filter(pk => pk.name.toLowerCase().includes((f.park||'').toLowerCase())).map(pk => (
                       <div key={pk.id} onMouseDown={() => { upd('park', pk.name); setShowParkDropdown(false); }}
-                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)', background:'var(--surface)'}}
-                        onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
-                        onMouseLeave={e => e.currentTarget.style.background='var(--surface)'}>
+                        style={{padding:'10px 14px', cursor:'pointer', borderBottom:'1px solid var(--border)', fontSize:14, color:'var(--text)'}}>
                         {pk.name}{pk.fieldType ? <span style={{fontSize:11, color:'var(--muted)', marginLeft:8}}>{pk.fieldType}</span> : ''}
                       </div>
                     ))}
@@ -3240,13 +3246,12 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
         </div>
       )}
 
-      {/* Filters + Search */}
       <div style={{...S.card, marginBottom:16, padding:'12px 14px'}}>
         <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
           <input style={{...S.input, flex:'1 1 160px', marginBottom:0}} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search notes..."/>
           <select style={{...S.input, flex:'1 1 120px', marginBottom:0}} value={filterPark} onChange={e => setFilterPark(e.target.value)}>
             <option value="">All Parks</option>
-            {allParks.map(p => <option key={p} value={p}>{p}</option>)}
+            {allParkNames.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
           <select style={{...S.input, flex:'1 1 120px', marginBottom:0}} value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
             <option value="">All Months</option>
@@ -3260,15 +3265,13 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
 
       {filtered.map(p => (
         <div key={p.id} onClick={() => openDetail(p.id)}
-          style={{...S.card, marginBottom:10, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center'}}
-          onMouseEnter={e => e.currentTarget.style.borderColor='var(--primary)'}
-          onMouseLeave={e => e.currentTarget.style.borderColor='var(--border)'}>
+          style={{...S.card, marginBottom:10, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <div>
             <div style={{fontWeight:600, fontSize:15, color:'var(--text)'}}>{p.date ? new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : 'No date'}</div>
             {p.park && <div style={{fontSize:13, color:'var(--muted)', marginTop:2}}>{p.park}</div>}
             {(p.notesGeneral || p.notesBatting || p.notesFielding || p.notesThrowing) && (
               <div style={{fontSize:12, color:'var(--muted)', marginTop:4}}>
-                {[p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].filter(Boolean).length} note section{[p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].filter(Boolean).length !== 1 ? 's' : ''}
+                {[p.notesGeneral, p.notesBatting, p.notesFielding, p.notesThrowing].filter(Boolean).length} note section(s)
               </div>
             )}
           </div>
@@ -3278,7 +3281,6 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
     </div>
   );
 }
-
 
 // ─── SHARED HELPERS (filters + aggregation) ────────────────────────────────────
 function useAllData(uid) {
