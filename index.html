@@ -864,7 +864,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div style={{padding:'10px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v2.49
+        v2.50
       </div>
     </nav>
   );
@@ -3062,7 +3062,7 @@ function PracticeDetailPage({ uid, practiceId, setPage }) {
   const p = editing ? f : practice;
 
   return (
-    <div style={{maxWidth:700, margin:'0 auto', padding:'16px 12px'}}>
+    <div className="page-content">
       <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:16}}>
         <button onClick={() => setPage('practices')} style={{...S.btnSecondary, padding:'6px 10px'}}>Back</button>
         <h2 style={{margin:0, fontSize:18, fontWeight:700, color:'var(--text)', flex:1}}>Practice Detail</h2>
