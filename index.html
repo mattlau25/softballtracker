@@ -2284,7 +2284,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           </div>
           {/* Line 2: Date · Time · Day/Night · Park · Home/Away */}
           <div style={{...S.listSub, marginBottom: (game.league || game.season) ? 10 : 0}}>
-            {fmtDate(game.date)}{game.time ? ` · ${fmtTime(game.time)}` : ''}{game.dayNight ? ` · ${game.dayNight}` : ''}{game.park ? ` · ${game.park}` : ''}{(() => { const matched = parks.find(p => p.name === game.park); return matched && matched.fieldType ? <span style={{fontSize:12, color:'var(--muted)', marginLeft:4}}>- {matched.fieldType}</span> : null; })()}{game.homeAway ? ` · ${game.homeAway}` : ''}
+            {fmtDate(game.date)}{game.time ? ` · ${fmtTime(game.time)}` : ''}{game.dayNight ? ` · ${game.dayNight}` : ''}{game.park ? ` · ${game.park}` : ''}{parks.find(p => p.name === game.park)?.fieldType ? <span style={{fontSize:12, color:'var(--muted)', marginLeft:4}}>- {parks.find(p => p.name === game.park).fieldType}</span> : null}{game.homeAway ? ` · ${game.homeAway}` : ''}
           </div>
           {/* Line 3: League · Tier [gap] Season */}
           {(game.league || game.season) && (
@@ -4396,6 +4396,7 @@ function App() {
   const setGameId = (id) => {
     setRouteState(r => ({ ...r, gameId: id }));
   };
+  const [practiceId, setPracticeId] = useState(null);
 
   useEffect(() => { return auth.onAuthStateChanged(u => {
     setUser(u ?? null);
