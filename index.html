@@ -864,7 +864,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div style={{padding:'10px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v2.48
+        v2.49
       </div>
     </nav>
   );
@@ -1419,7 +1419,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
         <div style={{display:'flex', justifyContent:'flex-end', marginBottom:10}}>
           <label style={{display:'flex', alignItems:'center', gap:8, fontSize:13, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
             <input type="checkbox" checked={showComments} onChange={e => toggleShowComments(e.target.checked)} style={{cursor:'pointer'}}/>
-            Show comments
+            Show Notes
           </label>
         </div>
 
@@ -3156,6 +3156,13 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
     setShowNotes(val);
     try { localStorage.setItem('practicesShowNotes', val ? 'true' : 'false'); } catch {}
   };
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('practicesViewMode') || 'list'; } catch { return 'list'; }
+  });
+  const toggleViewMode = (val) => {
+    setViewMode(val);
+    try { localStorage.setItem('practicesViewMode', val); } catch {}
+  };
   const today = new Date().toISOString().split('T')[0];
   const [f, setF] = useState({ date:today, park:'', notesGeneral:'', notesBatting:'', notesFielding:'', notesThrowing:'' });
 
@@ -3205,10 +3212,26 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
       <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
         <h2 style={{margin:0, fontSize:20, fontWeight:700, color:'var(--text)'}}>Practices</h2>
         <div style={{display:'flex', alignItems:'center', gap:12}}>
-          <label style={{display:'flex', alignItems:'center', gap:6, fontSize:13, color:'var(--muted)', cursor:'pointer'}}>
-            <input type="checkbox" checked={showNotes} onChange={e => toggleShowNotes(e.target.checked)} style={{cursor:'pointer'}}/>
-            Show Notes
-          </label>
+          {viewMode === 'list' && (
+            <label style={{display:'flex', alignItems:'center', gap:6, fontSize:13, color:'var(--muted)', cursor:'pointer'}}>
+              <input type="checkbox" checked={showNotes} onChange={e => toggleShowNotes(e.target.checked)} style={{cursor:'pointer'}}/>
+              Show Notes
+            </label>
+          )}
+          <div style={{display:'flex', borderRadius:8, border:'1.5px solid var(--border)', overflow:'hidden'}}>
+            <button onClick={() => toggleViewMode('list')}
+              style={{padding:'6px 12px', fontSize:13, cursor:'pointer', border:'none', borderRight:'1px solid var(--border)',
+                background: viewMode==='list' ? '#1e3a5f' : 'var(--surface)',
+                color: viewMode==='list' ? '#fff' : 'var(--text)'}}>
+              List
+            </button>
+            <button onClick={() => toggleViewMode('column')}
+              style={{padding:'6px 12px', fontSize:13, cursor:'pointer', border:'none',
+                background: viewMode==='column' ? '#1e3a5f' : 'var(--surface)',
+                color: viewMode==='column' ? '#fff' : 'var(--text)'}}>
+              Columns
+            </button>
+          </div>
           <button onClick={() => setShowForm(v => !v)} style={S.btnPrimary}>{showForm ? 'Cancel' : '+ Add Practice'}</button>
         </div>
       </div>
@@ -3276,7 +3299,7 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
 
       {filtered.length === 0 && <div style={S.empty}><p>{practices.length === 0 ? 'No practices recorded yet.' : 'No practices match your filters.'}</p></div>}
 
-      {filtered.map(p => (
+      {viewMode === 'list' && filtered.map(p => (
         <div key={p.id} onClick={() => openDetail(p.id)}
           style={{...S.card, marginBottom:10, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <div>
@@ -3294,6 +3317,35 @@ function PracticesPage({ uid, setPage, setPracticeId }) {
           <span style={{color:'var(--muted)', fontSize:18}}>›</span>
         </div>
       ))}
+
+      {viewMode === 'column' && filtered.length > 0 && (
+        <div style={{...S.card, overflowX:'auto'}}>
+          <table style={{width:'100%', borderCollapse:'collapse', fontSize:13}}>
+            <thead>
+              <tr style={{borderBottom:'2px solid var(--border)'}}>
+                {['Date','General Notes','Batting','Fielding','Throwing'].map(h => (
+                  <th key={h} style={{padding:'8px 12px', textAlign:'left', fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em', whiteSpace:'nowrap'}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p, i) => (
+                <tr key={p.id} onClick={() => openDetail(p.id)} style={{borderBottom:'1px solid var(--border)', cursor:'pointer', background: i%2===0 ? 'transparent' : 'var(--surface)'}}
+                  onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background= i%2===0 ? 'transparent' : 'var(--surface)'}>
+                  <td style={{padding:'10px 12px', verticalAlign:'top', whiteSpace:'nowrap'}}>
+                    <div style={{fontWeight:600, color:'var(--text)'}}>{p.date ? new Date(p.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '—'}</div>
+                    {p.park && <div style={{fontSize:11, color:'var(--muted)', marginTop:2}}>{p.park}</div>}
+                  </td>
+                  {['notesGeneral','notesBatting','notesFielding','notesThrowing'].map(key => (
+                    <td key={key} style={{padding:'10px 12px', verticalAlign:'top', color:'var(--muted)', fontStyle:'italic', lineHeight:1.3, fontSize:12}}>{p[key] || '—'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
