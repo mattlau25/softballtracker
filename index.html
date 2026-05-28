@@ -363,8 +363,9 @@ select {
   }
   .nav-item {
     flex-direction: column !important;
-    padding: 0px 4px calc(4px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 4px 4px env(safe-area-inset-bottom, 4px) !important;
     font-size: 10px !important;
+    line-height: 1 !important;
     gap: 4px !important;
     margin: 0 !important;
     width: auto !important;
@@ -2874,8 +2875,8 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── Spray Chart ── */}
       <div className="gd-spray" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap', minHeight:64, boxSizing:'border-box'}}>
-          <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap', minHeight:64, boxSizing:'border-box', cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+          <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
             <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center'}}></i>
           </div>
