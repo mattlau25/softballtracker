@@ -2529,7 +2529,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div className="gd-left">
       {/* ── At Bats ── */}
       <div className="gd-atbats" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer', minHeight:56, boxSizing:'border-box'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer', minHeight:64, boxSizing:'border-box'}} onClick={()=>{
             if (abCollapsed) { setAbCollapsed(false); return; }
             if ((showForm || editId) && window.__dirtyForm) {
               setWarnModal({ message: 'You have unsaved changes. Discard and collapse?', onConfirm: () => {
@@ -2540,7 +2540,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           }}>
           <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
-            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle', position:'relative', bottom:1}}></i>
+            <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle'}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showForm && !editId && !abCollapsed && abs.length > 1 && (
@@ -2691,7 +2691,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── Fielding ── */}
       <div className="gd-fielding" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer', minHeight:56, boxSizing:'border-box'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer', minHeight:64, boxSizing:'border-box'}} onClick={()=>{
             if (fieldingCollapsed) { setFieldingCollapsed(false); return; }
             if (showFieldingForm && window.__dirtyForm) {
               setWarnModal({ message: 'You have unsaved changes. Discard and collapse?', onConfirm: () => {
@@ -2702,7 +2702,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
           }}>
           <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
-            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
+            <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center'}}></i>
           </div>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             {!showFieldingForm && !fieldingCollapsed && fieldingEntries.length > 1 && (
@@ -2863,10 +2863,10 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
 
       {/* ── Spray Chart ── */}
       <div className="gd-spray" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap', minHeight:56, boxSizing:'border-box'}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap', minHeight:64, boxSizing:'border-box'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
-            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
+            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center'}}></i>
           </div>
           {!sprayCollapsed && (
             <div style={S.toggleGroup}>
