@@ -391,7 +391,17 @@ select {
   .main-wrap {
     margin-left: 0 !important;
     width: 100% !important;
+    padding-top: env(safe-area-inset-top, 0) !important;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Bigger nav-item icons on mobile bottom bar — Apollo-style ~24px instead of desktop's 16px */
+  .nav-sidebar .nav-item > span:first-child {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .nav-sidebar .nav-item > span:first-child > svg {
+    width: 24px !important;
+    height: 24px !important;
   }
   /* Show profile icon on Games page mobile */
   .mobile-profile-btn { display: flex !important; align-items: center !important; }
@@ -2528,7 +2538,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             }
             setShowForm(false); setEditId(null); setAbCollapsed(true); setReorderMode(false);
           }}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
+          <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>At Bats {abs.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({abs.length})</span>}</span>
             <i className={`fa-solid ${abCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', verticalAlign:'middle', position:'relative', bottom:1}}></i>
           </div>
@@ -2690,7 +2700,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
             }
             setShowFieldingForm(false); setEditFieldingId(null); setFieldingCollapsed(true); setFieldingReorderMode(false);
           }}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
+          <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32}}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Fielding {fieldingEntries.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({fieldingEntries.length})</span>}</span>
             <i className={`fa-solid ${fieldingCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
           </div>
@@ -2854,7 +2864,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       {/* ── Spray Chart ── */}
       <div className="gd-spray" style={{marginTop:8}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap', minHeight:56, boxSizing:'border-box'}}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+          <div style={{display:'flex', alignItems:'center', gap:6, minHeight:32, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
             <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
             <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
           </div>
