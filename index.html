@@ -152,21 +152,17 @@ body {
   .game-detail-split {
     display: grid;
     grid-template-columns: 55fr 45fr;
-    grid-template-areas:
-      "atbats   spray"
-      "fielding spray";
     column-gap: 32px;
-    row-gap: 8px;
     align-items: start;
     margin-top: 32px;
   }
-  /* .gd-left wraps At Bats only in the DOM, but on desktop we want At Bats and
-     Fielding to live in column 1 with Spray in column 2 spanning both rows.
-     display:contents lets .gd-atbats participate directly in the parent grid. */
-  .gd-left { display: contents; }
-  .gd-atbats   { grid-area: atbats; }
-  .gd-fielding { grid-area: fielding; }
-  .gd-spray    { grid-area: spray; }
+  /* .gd-left holds At Bats + Fielding stacked tightly. Spray Chart is its own
+     column — independent heights, no shared-row stretch. */
+  .gd-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
   .gd-atbats, .gd-fielding, .gd-spray { margin-top: 0 !important; }
 }
 
@@ -367,9 +363,9 @@ select {
   }
   .nav-item {
     flex-direction: column !important;
-    padding: 8px 4px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 4px 4px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
     font-size: 10px !important;
-    gap: 4px !important;
+    gap: 2px !important;
     margin: 0 !important;
     width: auto !important;
     border-radius: 0 !important;
@@ -390,12 +386,12 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v3.1 footer on mobile bottom bar */
+  /* Hide v3.2 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
     width: 100% !important;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
   /* Show profile icon on Games page mobile */
   .mobile-profile-btn { display: flex !important; align-items: center !important; }
@@ -1021,7 +1017,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v3.1
+        v3.2
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -2523,7 +2519,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
       <div className="gd-left">
       {/* ── At Bats ── */}
       <div className="gd-atbats" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer', minHeight:56, boxSizing:'border-box'}} onClick={()=>{
             if (abCollapsed) { setAbCollapsed(false); return; }
             if ((showForm || editId) && window.__dirtyForm) {
               setWarnModal({ message: 'You have unsaved changes. Discard and collapse?', onConfirm: () => {
@@ -2683,74 +2679,9 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         {abCollapsed && abs.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{abs.length} at bat{abs.length!==1?'s':''} recorded</div>}
       </div>
 
-      {/* ── Spray Chart ── */}
-      </div>{/* /gd-left */}
-      <div className="gd-spray" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap'}}>
-          <div style={{display:'flex', alignItems:'baseline', gap:6, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
-            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
-            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
-          </div>
-          {!sprayCollapsed && (
-            <div style={S.toggleGroup}>
-              {[['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val], i) => (
-                <button key={val} onClick={(e)=>{e.stopPropagation();setShowHeatmap(val);}}
-                  style={{...S.toggleBtn, ...(showHeatmap===val?S.toggleBtnActive:{}), ...(i>0?S.toggleBtnDivider:{})}}>{lbl}</button>
-              ))}
-            </div>
-          )}
-        </div>
-        {!sprayCollapsed && (
-          <div style={{display:'flex', alignItems:'center', gap:8, paddingTop:10, flexWrap:'wrap'}}>
-            <label style={{display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--muted)', cursor:'pointer', userSelect:'none', marginLeft:'auto'}}>
-              <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
-              Show outs
-            </label>
-          </div>
-        )}
-        {!sprayCollapsed && (
-          <div style={{...S.card, marginTop:8}}>
-            {sprayHits.length === 0 ? (
-              <div style={{...S.empty, padding:'20px 0'}}><p>No mapped balls yet.</p></div>
-            ) : (
-              <>
-                <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
-                  <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
-                </div>
-                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
-                  {sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}
-                  {' · '}<span style={{color:'var(--success)'}}>●</span> Hit
-                  {showOuts&&<> · <span style={{color:'var(--danger)'}}>●</span> Out · <span style={{color:'#2e6db4'}}>●</span> Other</>}
-                </p>
-                {dirTotal > 0 && showHeatmap==='spray' && (
-                  <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
-                    <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
-                    {['Pull','Center','Oppo'].map(dir => {
-                      const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
-                      return (
-                        <div key={dir} style={{marginBottom:8}}>
-                          <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
-                            <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
-                            <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
-                          </div>
-                          <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
-                            <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'} mapped</div>}
-      </div>
-
       {/* ── Fielding ── */}
       <div className="gd-fielding" style={{marginTop:8}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer'}} onClick={()=>{
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', cursor:'pointer', minHeight:56, boxSizing:'border-box'}} onClick={()=>{
             if (fieldingCollapsed) { setFieldingCollapsed(false); return; }
             if (showFieldingForm && window.__dirtyForm) {
               setWarnModal({ message: 'You have unsaved changes. Discard and collapse?', onConfirm: () => {
@@ -2918,6 +2849,72 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
         )}
         {fieldingCollapsed && fieldingEntries.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{fieldingEntries.length} inning{fieldingEntries.length!==1?'s':''} recorded</div>}
       </div>
+      </div>{/* /gd-left */}
+
+      {/* ── Spray Chart ── */}
+      <div className="gd-spray" style={{marginTop:8}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid var(--border)', gap:8, flexWrap:'wrap', minHeight:56, boxSizing:'border-box'}}>
+          <div style={{display:'flex', alignItems:'baseline', gap:6, cursor:'pointer'}} onClick={()=>setSprayCollapsed(c=>!c)}>
+            <span style={{...S.sectionTitle, marginBottom:0, lineHeight:1}}>Spray Chart {sprayHits.length > 0 && <span style={{color:'var(--label)', fontSize:14, fontWeight:400}}>({sprayHits.length})</span>}</span>
+            <i className={`fa-solid ${sprayCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'}`} style={{color:'var(--muted)', fontSize:11, lineHeight:1, display:'inline-flex', alignItems:'center', position:'relative', bottom:1}}></i>
+          </div>
+          {!sprayCollapsed && (
+            <div style={S.toggleGroup}>
+              {[['Spray','spray'],['Heat','heat'],['Zones','zones']].map(([lbl,val], i) => (
+                <button key={val} onClick={(e)=>{e.stopPropagation();setShowHeatmap(val);}}
+                  style={{...S.toggleBtn, ...(showHeatmap===val?S.toggleBtnActive:{}), ...(i>0?S.toggleBtnDivider:{})}}>{lbl}</button>
+              ))}
+            </div>
+          )}
+        </div>
+        {!sprayCollapsed && (
+          <div style={{...S.card, marginTop:8}}>
+            {sprayHits.length === 0 ? (
+              <div style={{...S.empty, padding:'20px 0'}}><p>No mapped balls yet.</p></div>
+            ) : (
+              <>
+                <div style={{background:'var(--spray-bg)', borderRadius:10, overflow:'hidden'}}>
+                  <SprayChart interactive={false} hits={sprayHits} showHeatmap={showHeatmap==='heat'} showZones={showHeatmap==='zones'} showOuts={showOuts}/>
+                </div>
+                <p style={{...S.hint, marginTop:8, textAlign:'center'}}>
+                  {sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'}
+                  {' · '}<span style={{color:'var(--success)'}}>●</span> Hit
+                  {showOuts&&<> · <span style={{color:'var(--danger)'}}>●</span> Out · <span style={{color:'#2e6db4'}}>●</span> Other</>}
+                </p>
+                {dirTotal > 0 && showHeatmap==='spray' && (
+                  <div style={{marginTop:14, paddingTop:12, borderTop:'1px solid var(--border)'}}>
+                    <div style={{...S.cardTitle, marginBottom:10}}>Hit Direction (hits only)</div>
+                    {['Pull','Center','Oppo'].map(dir => {
+                      const pct = dirTotal > 0 ? Math.round(dirCounts[dir]/dirTotal*100) : 0;
+                      return (
+                        <div key={dir} style={{marginBottom:8}}>
+                          <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:3}}>
+                            <span style={{color:'var(--text)', fontWeight:600}}>{dir}</span>
+                            <span style={{color:'var(--muted)'}}>{dirCounts[dir]} ({pct}%)</span>
+                          </div>
+                          <div style={{height:6, background:'var(--border)', borderRadius:4, overflow:'hidden'}}>
+                            <div style={{height:'100%', width:`${pct}%`, background:'#1e3a5f', borderRadius:4}}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {!sprayCollapsed && (
+          <div style={{display:'flex', justifyContent:'flex-end', marginTop:8}}>
+            <label style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:13, color:'var(--muted)', cursor:'pointer', userSelect:'none'}}>
+              <input type="checkbox" checked={showOuts} onChange={e=>setShowOuts(e.target.checked)} style={{cursor:'pointer'}}/>
+              Show outs
+            </label>
+          </div>
+        )}
+        {sprayCollapsed && sprayHits.length > 0 && <div style={{color:'var(--muted)', fontSize:13, paddingTop:6}}>{sprayHits.length} mapped {sprayHits.length===1?'ball':'balls'} mapped</div>}
+      </div>
+
       {/* /game-detail-split */}
       </div>
     </div>
@@ -4104,20 +4101,31 @@ function GameLogPage({ uid, setPage, setGameId }) {
     <div className="page-content">
       <div style={S.pageHeader} className="page-header-row">
         <h2 style={S.pageTitle}>Log</h2>
-        <div style={{display:'flex',gap:8}}>
-          {[['log','☰ Log'],['compare','⇄ Compare']].map(([m,l])=>(
-            <button key={m} onClick={()=>setMode(m)} style={{...S.btnSecondary,...(mode===m?{background:'#1e3a5f',color:'#fff',borderColor:'#1e3a5f',fontWeight:700}:{})}}>{l}</button>
-          ))}
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <div style={S.toggleGroup}>
+            <button onClick={()=>setMode('log')}
+              style={{...S.toggleBtn, ...(mode==='log'?S.toggleBtnActive:{}), display:'inline-flex', alignItems:'center', gap:8}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Log
+            </button>
+            <button onClick={()=>setMode('compare')}
+              style={{...S.toggleBtn, ...S.toggleBtnDivider, ...(mode==='compare'?S.toggleBtnActive:{}), display:'inline-flex', alignItems:'center', gap:8}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>
+              Compare
+            </button>
+          </div>
+          {mode==='log' && (
+            <button onClick={()=>setShowFilters(v=>!v)} style={{...S.btnSecondary,display:'inline-flex',alignItems:'center',gap:8}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="21" y2="6"/><circle cx="16" cy="6" r="2"/><line x1="4" y1="12" x2="21" y2="12"/><circle cx="10" cy="12" r="2"/><line x1="4" y1="18" x2="21" y2="18"/><circle cx="18" cy="18" r="2"/></svg>
+              Filters {countFilters(filters)>0&&<span style={{background:'#1e3a5f',color:'#fff',borderRadius:10,padding:'1px 7px',fontSize:11}}>{countFilters(filters)}</span>}
+            </button>
+          )}
         </div>
       </div>
 
       {mode==='log' && (<>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-          <span style={S.muted}>{filtered.length} game{filtered.length!==1?'s':''}</span>
-          <button onClick={()=>setShowFilters(v=>!v)} style={{...S.btnSecondary,display:'flex',alignItems:'center',gap:6,fontSize:12}}>
-            <i className="fa-solid fa-filter" style={{fontSize:10}}></i>
-            Filters {countFilters(filters)>0&&<span style={{background:'#1e3a5f',color:'#fff',borderRadius:10,padding:'1px 7px',fontSize:11}}>{countFilters(filters)}</span>}
-          </button>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',marginBottom:12}}>
+          <span style={S.muted}>{filtered.length} game{filtered.length!==1?'s':''} filtered</span>
         </div>
         {showFilters&&<div style={S.card}><div style={S.cardTitle}>Filters</div><FilterPanel filters={filters} setFilters={setFilters} games={games} onClear={()=>setFilters(emptyFilters())}/></div>}
         {filtered.length>0&&(
