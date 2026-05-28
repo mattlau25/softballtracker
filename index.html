@@ -363,9 +363,9 @@ select {
   }
   .nav-item {
     flex-direction: column !important;
-    padding: 4px 4px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 0px 4px calc(4px + env(safe-area-inset-bottom, 0px)) !important;
     font-size: 10px !important;
-    gap: 2px !important;
+    gap: 4px !important;
     margin: 0 !important;
     width: auto !important;
     border-radius: 0 !important;
@@ -393,6 +393,17 @@ select {
     width: 100% !important;
     padding-top: env(safe-area-inset-top, 0) !important;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Opaque scrim behind the iOS status bar (PWA) so page content slides UNDER it
+     instead of bleeding through. Matches site background in light & dark mode. */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--bg);
+    z-index: 9999;
+    pointer-events: none;
   }
   /* Bigger nav-item icons on mobile bottom bar — Apollo-style ~24px instead of desktop's 16px */
   .nav-sidebar .nav-item > span:first-child {
