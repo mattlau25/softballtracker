@@ -392,16 +392,18 @@ select {
   .main-wrap {
     margin-left: 0 !important;
     width: 100% !important;
-    padding-top: env(safe-area-inset-top, 0) !important;
+    padding-top: var(--sbh, 0px) !important;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
-  /* Opaque scrim behind the iOS status bar (PWA) so page content slides UNDER it
-     instead of bleeding through. Matches site background in light & dark mode. */
+  /* Opaque bar over the iOS status bar (PWA standalone) so page content slides UNDER
+     it instead of bleeding through. iOS reports env(safe-area-inset-top)=0 in
+     status-bar-style:default, so we size this from a JS-measured var (--sbh =
+     screen.height - innerHeight). Matches site background in light & dark mode. */
   body::before {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: env(safe-area-inset-top, 0px);
+    height: var(--sbh, 0px);
     background: var(--bg);
     z-index: 9999;
     pointer-events: none;
@@ -4758,47 +4760,26 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- ▼▼▼ TEMP DIAGNOSTIC — remove after we read the values ▼▼▼ -->
+<!-- iOS PWA status-bar height. status-bar-style:default reports
+     env(safe-area-inset-top)=0, so we measure it (screen.height - innerHeight)
+     and expose it as --sbh, used to size the opaque top bar + content offset.
+     Standalone-only; resolves to 0px in Safari and on desktop. -->
 <script>
 (function(){
-  function readEnv(side){
-    var d = document.createElement('div');
-    d.style.position='absolute'; d.style.visibility='hidden'; d.style.top='0';
-    d.style.paddingTop='env(safe-area-inset-'+side+', 0px)';
-    document.body.appendChild(d);
-    var v = getComputedStyle(d).paddingTop;
-    document.body.removeChild(d);
-    return v;
+  function setSBH(){
+    var standalone = (navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    var h = 0;
+    if (standalone) {
+      h = window.screen.height - window.innerHeight;
+      if (h < 20 || h > 80) h = 0; // sanity clamp; 0 disables the bar
+    }
+    document.documentElement.style.setProperty('--sbh', h + 'px');
   }
-  function show(){
-    var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ? 'YES' : 'no';
-    var navSA = (typeof navigator.standalone !== 'undefined') ? String(navigator.standalone) : 'n/a';
-    var vv = window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a';
-    var box = document.createElement('div');
-    box.id = '__sa_diag';
-    box.style.cssText = 'position:fixed;left:8px;right:8px;top:120px;z-index:2147483647;'
-      + 'background:#111;color:#0f0;font:13px/1.5 monospace;padding:12px 14px;border-radius:10px;'
-      + 'box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:pre;';
-    box.textContent =
-      'SAFE-AREA DIAGNOSTIC (tap to dismiss)\n'
-      + '─────────────────────────────\n'
-      + 'inset-top:    ' + readEnv('top') + '\n'
-      + 'inset-bottom: ' + readEnv('bottom') + '\n'
-      + 'inset-left:   ' + readEnv('left') + '\n'
-      + 'inset-right:  ' + readEnv('right') + '\n'
-      + 'display-mode standalone: ' + standalone + '\n'
-      + 'navigator.standalone:    ' + navSA + '\n'
-      + 'innerHeight:  ' + window.innerHeight + '\n'
-      + 'screen.height:' + window.screen.height + '\n'
-      + 'visualVP h:   ' + vv;
-    box.addEventListener('click', function(){ box.remove(); });
-    document.body.appendChild(box);
-  }
-  if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(show, 600);
-  else window.addEventListener('load', function(){ setTimeout(show, 600); });
+  setSBH();
+  window.addEventListener('orientationchange', function(){ setTimeout(setSBH, 300); });
 })();
 </script>
-<!-- ▲▲▲ TEMP DIAGNOSTIC ▲▲▲ -->
 
 <script>
   if ('serviceWorker' in navigator) {
