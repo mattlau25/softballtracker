@@ -387,7 +387,7 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v3.2 footer on mobile bottom bar */
+  /* Hide v3.4 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
@@ -1042,7 +1042,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v3.2
+        v3.4
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -4761,49 +4761,32 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- iOS PWA status-bar height. status-bar-style:default reports
-     env(safe-area-inset-top)=0, so we measure it (screen.height - viewport height)
-     and expose it as --sbh, used to size the opaque top bar + content offset.
-     Measured repeatedly because the standalone viewport doesn't settle until after
-     first paint; out-of-range readings (keyboard, pre-settle) are ignored so a good
-     value isn't clobbered. Standalone-only; resolves to 0px in Safari and on desktop. -->
+<!-- iOS PWA status-bar cover height. status-bar-style:default reports
+     env(safe-area-inset-top)=0, and screen.height - innerHeight measurement proved
+     unreliable in standalone (came up short → status bar bleed). So we set a fixed
+     47px in standalone mode (iPhone 12 Pro status bar height; same-color bar means a
+     few px of over-coverage is invisible, but too-short bleeds). The CSS wraps this
+     in max(env(safe-area-inset-top), --sbh) so it auto-upgrades if a future iOS
+     exposes the real inset. Standalone-only; resolves to 0px in Safari and desktop. -->
 <script>
 (function(){
-  var docEl = document.documentElement, lastValid = null;
   function isStandalone(){
     return (navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   }
-  function compute(){
-    if (!isStandalone()){ docEl.style.setProperty('--sbh', '0px'); return; }
-    var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-    var h = Math.round(window.screen.height - vh);
-    if (h >= 20 && h <= 80){
-      lastValid = h;
-      docEl.style.setProperty('--sbh', h + 'px');
-    } else if (lastValid == null){
-      // viewport not settled yet — show the bar at a sensible default so content
-      // never bleeds under the status bar; refined to the exact value on next tick
-      docEl.style.setProperty('--sbh', '48px');
-    }
+  function apply(){
+    document.documentElement.style.setProperty('--sbh', isStandalone() ? '47px' : '0px');
   }
-  compute();
-  ['load','resize','orientationchange','pageshow','focus'].forEach(function(ev){
-    window.addEventListener(ev, function(){ setTimeout(compute, 200); });
+  apply();
+  ['orientationchange','resize','pageshow'].forEach(function(ev){
+    window.addEventListener(ev, function(){ setTimeout(apply, 200); });
   });
-  if (window.visualViewport){
-    window.visualViewport.addEventListener('resize', function(){ setTimeout(compute, 200); });
-  }
-  document.addEventListener('DOMContentLoaded', compute);
-  setTimeout(compute, 300);
-  setTimeout(compute, 1000);
-  setTimeout(compute, 2000);
 })();
 </script>
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjInOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjMnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
