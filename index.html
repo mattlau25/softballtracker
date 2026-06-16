@@ -22,9 +22,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
 /* ── Reset ── */
@@ -392,18 +392,19 @@ select {
   .main-wrap {
     margin-left: 0 !important;
     width: 100% !important;
-    padding-top: var(--sbh, 0px) !important;
+    padding-top: max(env(safe-area-inset-top, 0px), var(--sbh, 0px)) !important;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
   /* Opaque bar over the iOS status bar (PWA standalone) so page content slides UNDER
      it instead of bleeding through. iOS reports env(safe-area-inset-top)=0 in
      status-bar-style:default, so we size this from a JS-measured var (--sbh =
-     screen.height - innerHeight). Matches site background in light & dark mode. */
+     screen.height - viewport height), falling back to env() if a future iOS exposes
+     it. Matches site background in light & dark mode. */
   body::before {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: var(--sbh, 0px);
+    height: max(env(safe-area-inset-top, 0px), var(--sbh, 0px));
     background: var(--bg);
     z-index: 9999;
     pointer-events: none;
@@ -4761,29 +4762,48 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
 <!-- iOS PWA status-bar height. status-bar-style:default reports
-     env(safe-area-inset-top)=0, so we measure it (screen.height - innerHeight)
+     env(safe-area-inset-top)=0, so we measure it (screen.height - viewport height)
      and expose it as --sbh, used to size the opaque top bar + content offset.
-     Standalone-only; resolves to 0px in Safari and on desktop. -->
+     Measured repeatedly because the standalone viewport doesn't settle until after
+     first paint; out-of-range readings (keyboard, pre-settle) are ignored so a good
+     value isn't clobbered. Standalone-only; resolves to 0px in Safari and on desktop. -->
 <script>
 (function(){
-  function setSBH(){
-    var standalone = (navigator.standalone === true) ||
+  var docEl = document.documentElement, lastValid = null;
+  function isStandalone(){
+    return (navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    var h = 0;
-    if (standalone) {
-      h = window.screen.height - window.innerHeight;
-      if (h < 20 || h > 80) h = 0; // sanity clamp; 0 disables the bar
-    }
-    document.documentElement.style.setProperty('--sbh', h + 'px');
   }
-  setSBH();
-  window.addEventListener('orientationchange', function(){ setTimeout(setSBH, 300); });
+  function compute(){
+    if (!isStandalone()){ docEl.style.setProperty('--sbh', '0px'); return; }
+    var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    var h = Math.round(window.screen.height - vh);
+    if (h >= 20 && h <= 80){
+      lastValid = h;
+      docEl.style.setProperty('--sbh', h + 'px');
+    } else if (lastValid == null){
+      // viewport not settled yet — show the bar at a sensible default so content
+      // never bleeds under the status bar; refined to the exact value on next tick
+      docEl.style.setProperty('--sbh', '48px');
+    }
+  }
+  compute();
+  ['load','resize','orientationchange','pageshow','focus'].forEach(function(ev){
+    window.addEventListener(ev, function(){ setTimeout(compute, 200); });
+  });
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){ setTimeout(compute, 200); });
+  }
+  document.addEventListener('DOMContentLoaded', compute);
+  setTimeout(compute, 300);
+  setTimeout(compute, 1000);
+  setTimeout(compute, 2000);
 })();
 </script>
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjEnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjInOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
