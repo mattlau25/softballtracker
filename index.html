@@ -387,7 +387,7 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v3.4 footer on mobile bottom bar */
+  /* Hide v3.5 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
@@ -395,20 +395,9 @@ select {
     padding-top: max(env(safe-area-inset-top, 0px), var(--sbh, 0px)) !important;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
-  /* Opaque bar over the iOS status bar (PWA standalone) so page content slides UNDER
-     it instead of bleeding through. iOS reports env(safe-area-inset-top)=0 in
-     status-bar-style:default, so we size this from a JS-measured var (--sbh =
-     screen.height - viewport height), falling back to env() if a future iOS exposes
-     it. Matches site background in light & dark mode. */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: max(env(safe-area-inset-top, 0px), var(--sbh, 0px));
-    background: var(--bg);
-    z-index: 9999;
-    pointer-events: none;
-  }
+  /* iOS PWA status-bar cover is an injected #ios-status-cover div (see script near
+     end of file) — a real element with maxed z-index, since body::before did not
+     reliably paint over scrolling content in standalone. */
   /* Bigger nav-item icons on mobile bottom bar — Apollo-style ~24px instead of desktop's 16px */
   .nav-sidebar .nav-item > span:first-child {
     width: 24px !important;
@@ -1042,7 +1031,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v3.4
+        v3.5
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -4761,24 +4750,47 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- iOS PWA status-bar cover height. status-bar-style:default reports
-     env(safe-area-inset-top)=0, and screen.height - innerHeight measurement proved
-     unreliable in standalone (came up short → status bar bleed). So we set a fixed
-     47px in standalone mode (iPhone 12 Pro status bar height; same-color bar means a
-     few px of over-coverage is invisible, but too-short bleeds). The CSS wraps this
-     in max(env(safe-area-inset-top), --sbh) so it auto-upgrades if a future iOS
-     exposes the real inset. Standalone-only; resolves to 0px in Safari and desktop. -->
+<!-- iOS PWA status-bar cover. status-bar-style:default + viewport-fit=cover lets web
+     content render full-screen under the status bar, and env(safe-area-inset-top)
+     reports 0, so we cover the strip ourselves. A body::before pseudo-element did not
+     reliably paint over the scrolling app content in standalone, so we inject a REAL
+     div as the last child of <body> with maxed z-index — guaranteed to paint on top.
+     Fixed 47px (iPhone 12 Pro status bar); same-color bar so over-coverage is
+     invisible. Standalone-only; height 0 in Safari/desktop. --sbh also offsets
+     .main-wrap content so nothing starts under the bar. -->
 <script>
 (function(){
   function isStandalone(){
     return (navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   }
-  function apply(){
-    document.documentElement.style.setProperty('--sbh', isStandalone() ? '47px' : '0px');
+  var SBH = 47;
+  function ensureCover(){
+    var el = document.getElementById('ios-status-cover');
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'ios-status-cover';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;'
+        + 'z-index:2147483647;pointer-events:none;'
+        + 'background:var(--bg);'
+        + 'padding-top:env(safe-area-inset-top,0px);';
+      document.body.appendChild(el); // last child → paints above all siblings
+    } else if (el !== document.body.lastElementChild){
+      document.body.appendChild(el); // keep it last even if React re-mounts
+    }
+    return el;
   }
-  apply();
-  ['orientationchange','resize','pageshow'].forEach(function(ev){
+  function apply(){
+    var on = isStandalone();
+    var h = on ? SBH : 0;
+    document.documentElement.style.setProperty('--sbh', h + 'px');
+    var el = ensureCover();
+    el.style.height = h + 'px';
+    el.style.display = on ? 'block' : 'none';
+  }
+  if (document.body) apply();
+  else document.addEventListener('DOMContentLoaded', apply);
+  ['orientationchange','resize','pageshow','load'].forEach(function(ev){
     window.addEventListener(ev, function(){ setTimeout(apply, 200); });
   });
 })();
@@ -4786,7 +4798,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjMnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjQnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4geyBpZiAoZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZmlyZWJhc2UnKSB8fCBlLnJlcXVlc3QudXJsLmluY2x1ZGVzKCdnb29nbGVhcGlzJykgfHwgZS5yZXF1ZXN0LnVybC5pbmNsdWRlcygnZ3N0YXRpYycpIHx8IGUucmVxdWVzdC51cmwuaW5jbHVkZXMoJ2NkbmpzJykpIHJldHVybjsgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2goZS5yZXF1ZXN0KS50aGVuKHIgPT4gciB8fCBmZXRjaChlLnJlcXVlc3QpLmNhdGNoKCgpID0+IGNhY2hlcy5tYXRjaCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJykpKSk7IH0pOw==";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
