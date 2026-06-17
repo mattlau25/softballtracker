@@ -5,8 +5,8 @@
 <meta name="apple-mobile-web-app-title" content="Softball Tracker">
 <link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f0f2f5">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Softball Tracker</title>
 <script>
@@ -31,11 +31,15 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── Base ── */
+html {
+  background: var(--bg);
+}
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
   font-size: 16px;
   line-height: 1.5;
   min-height: 100vh;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -387,12 +391,11 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v3.7 footer on mobile bottom bar */
+  /* Hide v3.8 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
     width: 100% !important;
-    padding-top: var(--sbh, 0px) !important;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
   }
   /* iOS PWA status-bar cover is an injected #ios-status-cover div (see script near
@@ -1031,7 +1034,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v3.7
+        v3.8
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -1195,6 +1198,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
       <button onClick={save} disabled={saving} style={S.btnPrimary}>
         {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Profile'}
       </button>
+      <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>v3.8</div>
     </div>
   );
 }
@@ -4694,7 +4698,7 @@ function App() {
     document.body.style.color = darkMode ? '#e2e8f0' : '#1a202c';
     // Drive the iOS Safari status-bar tint from the SITE theme, not the OS preference
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', darkMode ? '#0d1117' : '#ffffff');
+    if (meta) meta.setAttribute('content', darkMode ? '#0d1117' : '#f0f2f5');
   }, [darkMode]);
 
   useEffect(() => {
@@ -4750,54 +4754,21 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- iOS PWA status-bar cover. status-bar-style:default + viewport-fit=cover lets web
-     content render full-screen under the status bar, and env(safe-area-inset-top)
-     reports 0, so we cover the strip ourselves. A body::before pseudo-element did not
-     reliably paint over the scrolling app content in standalone, so we inject a REAL
-     div as the last child of <body> with maxed z-index — guaranteed to paint on top.
-     Fixed 47px (iPhone 12 Pro status bar); same-color bar so over-coverage is
-     invisible. Standalone-only; height 0 in Safari/desktop. --sbh also offsets
-     .main-wrap content so nothing starts under the bar. -->
+<!-- Status bar is now handled natively: removing viewport-fit=cover lets iOS inset
+     the app below the status bar automatically (no bleed, no clip). This script just
+     cleans up the old injected cover element / --sbh var if a previous version left
+     one behind, so upgrading users don't see a leftover bar. -->
 <script>
 (function(){
-  function isStandalone(){
-    return (navigator.standalone === true) ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  }
-  var SBH = 47;
-  function ensureCover(){
-    var el = document.getElementById('ios-status-cover');
-    if (!el){
-      el = document.createElement('div');
-      el.id = 'ios-status-cover';
-      el.style.cssText = 'position:fixed;top:0;left:0;right:0;'
-        + 'z-index:2147483647;pointer-events:none;'
-        + 'background:var(--bg);';
-      document.body.appendChild(el); // last child → paints above all siblings
-    } else if (el !== document.body.lastElementChild){
-      document.body.appendChild(el); // keep it last even if React re-mounts
-    }
-    return el;
-  }
-  function apply(){
-    var on = isStandalone();
-    var h = on ? SBH : 0;
-    document.documentElement.style.setProperty('--sbh', h + 'px');
-    var el = ensureCover();
-    el.style.height = h + 'px';
-    el.style.display = on ? 'block' : 'none';
-  }
-  if (document.body) apply();
-  else document.addEventListener('DOMContentLoaded', apply);
-  ['orientationchange','resize','pageshow','load'].forEach(function(ev){
-    window.addEventListener(ev, function(){ setTimeout(apply, 200); });
-  });
+  var old = document.getElementById('ios-status-cover');
+  if (old) old.remove();
+  document.documentElement.style.removeProperty('--sbh');
 })();
 </script>
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjYnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gewogIHZhciByZXEgPSBlLnJlcXVlc3Q7CiAgaWYgKHJlcS5tZXRob2QgIT09ICdHRVQnKSByZXR1cm47CiAgaWYgKHJlcS51cmwuaW5jbHVkZXMoJ2ZpcmViYXNlJykgfHwgcmVxLnVybC5pbmNsdWRlcygnZ29vZ2xlYXBpcycpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dzdGF0aWMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdjZG5qcycpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ3VucGtnJykpIHJldHVybjsKICB2YXIgYWNjZXB0ID0gcmVxLmhlYWRlcnMuZ2V0KCdhY2NlcHQnKSB8fCAnJzsKICBpZiAocmVxLm1vZGUgPT09ICduYXZpZ2F0ZScgfHwgYWNjZXB0LmluY2x1ZGVzKCd0ZXh0L2h0bWwnKSkgewogICAgLy8gTkVUV09SSy1GSVJTVCBmb3IgYXBwIEhUTUw6IGFsd2F5cyBsb2FkIHRoZSBmcmVzaGVzdCBkZXBsb3kgd2hlbiBvbmxpbmUsCiAgICAvLyBmYWxsIGJhY2sgdG8gY2FjaGUgb25seSB3aGVuIG9mZmxpbmUuIEZpeGVzIHN0YWxlLWRlcGxveSBwcm9ibGVtLgogICAgZS5yZXNwb25kV2l0aChmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24ocmVzKXsgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24oYyl7IGMucHV0KCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnLCBjb3B5KTsgfSk7IHJldHVybiByZXM7IH0pLmNhdGNoKGZ1bmN0aW9uKCl7IHJldHVybiBjYWNoZXMubWF0Y2goJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCcpOyB9KSk7CiAgICByZXR1cm47CiAgfQogIC8vIENhY2hlLWZpcnN0IGZvciBvdGhlciBzYW1lLW9yaWdpbiBhc3NldHMgKGljb25zLCBtYW5pZmVzdCkuCiAgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHIpeyByZXR1cm4gciB8fCBmZXRjaChyZXEpOyB9KSk7Cn0pOw==";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjcnOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gewogIHZhciByZXEgPSBlLnJlcXVlc3Q7CiAgaWYgKHJlcS5tZXRob2QgIT09ICdHRVQnKSByZXR1cm47CiAgaWYgKHJlcS51cmwuaW5jbHVkZXMoJ2ZpcmViYXNlJykgfHwgcmVxLnVybC5pbmNsdWRlcygnZ29vZ2xlYXBpcycpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dzdGF0aWMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdjZG5qcycpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ3VucGtnJykpIHJldHVybjsKICB2YXIgYWNjZXB0ID0gcmVxLmhlYWRlcnMuZ2V0KCdhY2NlcHQnKSB8fCAnJzsKICBpZiAocmVxLm1vZGUgPT09ICduYXZpZ2F0ZScgfHwgYWNjZXB0LmluY2x1ZGVzKCd0ZXh0L2h0bWwnKSkgewogICAgLy8gTkVUV09SSy1GSVJTVCBmb3IgYXBwIEhUTUw6IGFsd2F5cyBsb2FkIHRoZSBmcmVzaGVzdCBkZXBsb3kgd2hlbiBvbmxpbmUsCiAgICAvLyBmYWxsIGJhY2sgdG8gY2FjaGUgb25seSB3aGVuIG9mZmxpbmUuIEZpeGVzIHN0YWxlLWRlcGxveSBwcm9ibGVtLgogICAgZS5yZXNwb25kV2l0aChmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24ocmVzKXsgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24oYyl7IGMucHV0KCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnLCBjb3B5KTsgfSk7IHJldHVybiByZXM7IH0pLmNhdGNoKGZ1bmN0aW9uKCl7IHJldHVybiBjYWNoZXMubWF0Y2goJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCcpOyB9KSk7CiAgICByZXR1cm47CiAgfQogIC8vIENhY2hlLWZpcnN0IGZvciBvdGhlciBzYW1lLW9yaWdpbiBhc3NldHMgKGljb25zLCBtYW5pZmVzdCkuCiAgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHIpeyByZXR1cm4gciB8fCBmZXRjaChyZXEpOyB9KSk7Cn0pOw==";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
