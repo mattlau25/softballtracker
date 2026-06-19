@@ -391,7 +391,7 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v4.7 footer on mobile bottom bar */
+  /* Hide v4.8 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
@@ -1036,7 +1036,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v4.7
+        v4.8
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -1201,7 +1201,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
         {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Profile'}
       </button>
       <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>
-        v4.7 · {((typeof navigator!=='undefined' && navigator.standalone===true) || (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'app' : 'browser'}
+        v4.8 · {((typeof navigator!=='undefined' && navigator.standalone===true) || (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'app' : 'browser'}
       </div>
     </div>
   );
@@ -4758,84 +4758,24 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- Status bar fix + live height adjuster. The grey bar is a single sticky element (first
-     child of <body>) that reserves the status-bar height AND paints the strip. Because the
-     exact status-bar height on this device is uncertain, a small −/+ control lets the user
-     dial it in (1px steps), saved to localStorage so it persists. iOS only. -->
+<!-- Status bar: user-confirmed via live adjuster that the correct bar height is 0px — iOS
+     positions the content correctly on its own and the grey html/body background colors the
+     status strip. So we add NO bar and NO top padding. This cleanup removes any leftover
+     cover/adjuster element + saved height from an older cached version on upgrade. -->
 <script>
 (function(){
-  var KEY = 'sbHeightPx';
-  function isIOS(){
-    var standalone = (navigator.standalone === true) ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    var ios = /iP(hone|od|ad)/.test(navigator.userAgent || '') ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    return standalone || ios;
-  }
-  function getH(){
-    var v = parseInt(localStorage.getItem(KEY), 10);
-    return isNaN(v) ? 47 : Math.max(0, Math.min(120, v));
-  }
-  function bar(){
-    var el = document.getElementById('ios-status-cover');
-    if (!el){
-      el = document.createElement('div');
-      el.id = 'ios-status-cover';
-      el.style.cssText = 'position:sticky;top:0;left:0;right:0;z-index:99999;pointer-events:none;background:var(--bg);';
-      document.body.insertBefore(el, document.body.firstChild);
-    } else if (el !== document.body.firstElementChild){
-      document.body.insertBefore(el, document.body.firstChild);
-    }
-    return el;
-  }
-  function setH(h){
-    h = Math.max(0, Math.min(120, h));
-    localStorage.setItem(KEY, h);
-    bar().style.height = h + 'px';
-    var lbl = document.getElementById('sb-adj-val');
-    if (lbl) lbl.textContent = h + 'px';
-  }
-  function ensureAdj(){
-    if (document.getElementById('sb-adj')) return;
-    var wrap = document.createElement('div');
-    wrap.id = 'sb-adj';
-    wrap.style.cssText = 'position:fixed;right:8px;bottom:96px;z-index:100000;display:flex;align-items:center;gap:8px;'
-      + 'background:#111;color:#fff;border-radius:24px;padding:6px 10px;font:13px/1 -apple-system,sans-serif;'
-      + 'box-shadow:0 4px 16px rgba(0,0,0,.4);';
-    var minus = document.createElement('button');
-    minus.textContent = '−';
-    var plus = document.createElement('button');
-    plus.textContent = '+';
-    var bstyle = 'width:36px;height:36px;border-radius:18px;border:none;background:#333;color:#fff;font-size:20px;line-height:1;cursor:pointer;';
-    minus.style.cssText = bstyle; plus.style.cssText = bstyle;
-    var lbl = document.createElement('span');
-    lbl.id = 'sb-adj-val';
-    lbl.textContent = getH() + 'px';
-    lbl.style.cssText = 'min-width:44px;text-align:center;font-variant-numeric:tabular-nums;';
-    var tag = document.createElement('span');
-    tag.textContent = 'bar';
-    tag.style.cssText = 'opacity:.6;font-size:11px;';
-    minus.addEventListener('click', function(){ setH(getH() - 1); });
-    plus.addEventListener('click', function(){ setH(getH() + 1); });
-    wrap.appendChild(tag); wrap.appendChild(minus); wrap.appendChild(lbl); wrap.appendChild(plus);
-    document.body.appendChild(wrap);
-  }
-  function apply(){
-    if (!isIOS()){ bar().style.height = '0px'; return; }
-    bar().style.height = getH() + 'px';
-    ensureAdj();
-  }
-  if (document.body) apply();
-  else document.addEventListener('DOMContentLoaded', apply);
-  ['orientationchange','resize','pageshow','load'].forEach(function(ev){
-    window.addEventListener(ev, function(){ setTimeout(apply, 200); });
+  ['ios-status-cover','sb-adj'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.remove();
   });
+  try { localStorage.removeItem('sbHeightPx'); } catch(e){}
+  document.documentElement.style.removeProperty('--sbh');
 })();
 </script>
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjE2JzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjE3JzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
