@@ -391,7 +391,7 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v4.0 footer on mobile bottom bar */
+  /* Hide v4.1 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
@@ -1035,7 +1035,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v4.0
+        v4.1
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -1199,7 +1199,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
       <button onClick={save} disabled={saving} style={S.btnPrimary}>
         {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Profile'}
       </button>
-      <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>v4.0</div>
+      <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>v4.1</div>
     </div>
   );
 }
@@ -4755,53 +4755,23 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- iOS status-bar cover. In a standalone iOS web app the page ALWAYS fills the whole
-     screen under the status bar (iOS does not auto-inset it), and the same happens in
-     mobile Safari with viewport-fit=cover. env(safe-area-inset-top) reports 0 in
-     standalone, so we cover the strip with a real injected div (last child of <body>,
-     maxed z-index) and offset content by the same 47px via --sbh. Shown on iOS in
-     both the app and Safari; 0 on desktop. -->
+<!-- Status bar: iOS already insets standalone content below the status bar AND fills
+     that strip with the page background, so the grey html/body background handles the
+     status-bar tint and no cover/padding is needed. Earlier versions injected a fixed
+     cover div + 47px top padding, which DOUBLE-offset the content (too-tall grey strip
+     / header hidden). This cleanup removes any leftover cover + --sbh from a cached
+     older version on upgrade. -->
 <script>
 (function(){
-  var SBH = 47; // iPhone status-bar height (pt)
-  function needsBar(){
-    var standalone = (navigator.standalone === true) ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    var iOS = /iP(hone|od|ad)/.test(navigator.userAgent || '') ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    return standalone || iOS;
-  }
-  function ensureCover(){
-    var el = document.getElementById('ios-status-cover');
-    if (!el){
-      el = document.createElement('div');
-      el.id = 'ios-status-cover';
-      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;pointer-events:none;background:var(--bg);';
-      document.body.appendChild(el); // last child → paints above all siblings
-    } else if (el !== document.body.lastElementChild){
-      document.body.appendChild(el); // keep it last even if React re-mounts
-    }
-    return el;
-  }
-  function apply(){
-    var on = needsBar();
-    var h = on ? SBH : 0;
-    document.documentElement.style.setProperty('--sbh', h + 'px');
-    var el = ensureCover();
-    el.style.height = h + 'px';
-    el.style.display = on ? 'block' : 'none';
-  }
-  if (document.body) apply();
-  else document.addEventListener('DOMContentLoaded', apply);
-  ['orientationchange','resize','pageshow','load'].forEach(function(ev){
-    window.addEventListener(ev, function(){ setTimeout(apply, 200); });
-  });
+  var old = document.getElementById('ios-status-cover');
+  if (old) old.remove();
+  document.documentElement.style.removeProperty('--sbh');
 })();
 </script>
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjknOwpjb25zdCBBU1NFVFMgPSBbJy9zb2Z0YmFsbHRyYWNrZXIvJywgJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7IHNlbGYuc2tpcFdhaXRpbmcoKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignYWN0aXZhdGUnLCBlID0+IHsgZS53YWl0VW50aWwoY2FjaGVzLmtleXMoKS50aGVuKGtleXMgPT4gUHJvbWlzZS5hbGwoa2V5cy5maWx0ZXIoayA9PiBrICE9PSBDQUNIRSkubWFwKGsgPT4gY2FjaGVzLmRlbGV0ZShrKSkpKSk7IHNlbGYuY2xpZW50cy5jbGFpbSgpOyB9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGUgPT4gewogIHZhciByZXEgPSBlLnJlcXVlc3Q7CiAgaWYgKHJlcS5tZXRob2QgIT09ICdHRVQnKSByZXR1cm47CiAgaWYgKHJlcS51cmwuaW5jbHVkZXMoJ2ZpcmViYXNlJykgfHwgcmVxLnVybC5pbmNsdWRlcygnZ29vZ2xlYXBpcycpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dzdGF0aWMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdjZG5qcycpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ3VucGtnJykpIHJldHVybjsKICB2YXIgYWNjZXB0ID0gcmVxLmhlYWRlcnMuZ2V0KCdhY2NlcHQnKSB8fCAnJzsKICBpZiAocmVxLm1vZGUgPT09ICduYXZpZ2F0ZScgfHwgYWNjZXB0LmluY2x1ZGVzKCd0ZXh0L2h0bWwnKSkgewogICAgLy8gTkVUV09SSy1GSVJTVCBmb3IgYXBwIEhUTUw6IGFsd2F5cyBsb2FkIHRoZSBmcmVzaGVzdCBkZXBsb3kgd2hlbiBvbmxpbmUsCiAgICAvLyBmYWxsIGJhY2sgdG8gY2FjaGUgb25seSB3aGVuIG9mZmxpbmUuIEZpeGVzIHN0YWxlLWRlcGxveSBwcm9ibGVtLgogICAgZS5yZXNwb25kV2l0aChmZXRjaChyZXEpLnRoZW4oZnVuY3Rpb24ocmVzKXsgdmFyIGNvcHkgPSByZXMuY2xvbmUoKTsgY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oZnVuY3Rpb24oYyl7IGMucHV0KCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnLCBjb3B5KTsgfSk7IHJldHVybiByZXM7IH0pLmNhdGNoKGZ1bmN0aW9uKCl7IHJldHVybiBjYWNoZXMubWF0Y2goJy9zb2Z0YmFsbHRyYWNrZXIvaW5kZXguaHRtbCcpOyB9KSk7CiAgICByZXR1cm47CiAgfQogIC8vIENhY2hlLWZpcnN0IGZvciBvdGhlciBzYW1lLW9yaWdpbiBhc3NldHMgKGljb25zLCBtYW5pZmVzdCkuCiAgZS5yZXNwb25kV2l0aChjYWNoZXMubWF0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHIpeyByZXR1cm4gciB8fCBmZXRjaChyZXEpOyB9KSk7Cn0pOw==";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjEwJzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
