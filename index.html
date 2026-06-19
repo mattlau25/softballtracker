@@ -4758,18 +4758,70 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- Status bar: user-confirmed via live adjuster that the correct bar height is 0px — iOS
-     positions the content correctly on its own and the grey html/body background colors the
-     status strip. So we add NO bar and NO top padding. This cleanup removes any leftover
-     cover/adjuster element + saved height from an older cached version on upgrade. -->
+<!-- Status bar: single sticky grey bar (first child of <body>) + live −/+ adjuster so the
+     user dials in the exact height for their device (saved to localStorage). Default 47. -->
 <script>
 (function(){
-  ['ios-status-cover','sb-adj'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.remove();
+  var KEY = 'sbHeightPx';
+  function isIOS(){
+    var standalone = (navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    var ios = /iP(hone|od|ad)/.test(navigator.userAgent || '') ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return standalone || ios;
+  }
+  function getH(){
+    var v = parseInt(localStorage.getItem(KEY), 10);
+    return isNaN(v) ? 47 : Math.max(0, Math.min(120, v));
+  }
+  function bar(){
+    var el = document.getElementById('ios-status-cover');
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'ios-status-cover';
+      el.style.cssText = 'position:sticky;top:0;left:0;right:0;z-index:99999;pointer-events:none;background:var(--bg);';
+      document.body.insertBefore(el, document.body.firstChild);
+    } else if (el !== document.body.firstElementChild){
+      document.body.insertBefore(el, document.body.firstChild);
+    }
+    return el;
+  }
+  function setH(h){
+    h = Math.max(0, Math.min(120, h));
+    localStorage.setItem(KEY, h);
+    bar().style.height = h + 'px';
+    var lbl = document.getElementById('sb-adj-val');
+    if (lbl) lbl.textContent = h + 'px';
+  }
+  function ensureAdj(){
+    if (document.getElementById('sb-adj')) return;
+    var wrap = document.createElement('div');
+    wrap.id = 'sb-adj';
+    wrap.style.cssText = 'position:fixed;right:8px;bottom:96px;z-index:100000;display:flex;align-items:center;gap:8px;'
+      + 'background:#111;color:#fff;border-radius:24px;padding:6px 10px;font:13px/1 -apple-system,sans-serif;'
+      + 'box-shadow:0 4px 16px rgba(0,0,0,.4);';
+    var minus = document.createElement('button'); minus.textContent = '−';
+    var plus = document.createElement('button'); plus.textContent = '+';
+    var bstyle = 'width:36px;height:36px;border-radius:18px;border:none;background:#333;color:#fff;font-size:20px;line-height:1;cursor:pointer;';
+    minus.style.cssText = bstyle; plus.style.cssText = bstyle;
+    var lbl = document.createElement('span'); lbl.id = 'sb-adj-val'; lbl.textContent = getH() + 'px';
+    lbl.style.cssText = 'min-width:44px;text-align:center;font-variant-numeric:tabular-nums;';
+    var tag = document.createElement('span'); tag.textContent = 'bar'; tag.style.cssText = 'opacity:.6;font-size:11px;';
+    minus.addEventListener('click', function(){ setH(getH() - 1); });
+    plus.addEventListener('click', function(){ setH(getH() + 1); });
+    wrap.appendChild(tag); wrap.appendChild(minus); wrap.appendChild(lbl); wrap.appendChild(plus);
+    document.body.appendChild(wrap);
+  }
+  function apply(){
+    if (!isIOS()){ bar().style.height = '0px'; return; }
+    bar().style.height = getH() + 'px';
+    ensureAdj();
+  }
+  if (document.body) apply();
+  else document.addEventListener('DOMContentLoaded', apply);
+  ['orientationchange','resize','pageshow','load'].forEach(function(ev){
+    window.addEventListener(ev, function(){ setTimeout(apply, 200); });
   });
-  try { localStorage.removeItem('sbHeightPx'); } catch(e){}
-  document.documentElement.style.removeProperty('--sbh');
 })();
 </script>
 
