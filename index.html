@@ -391,7 +391,7 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v4.2 footer on mobile bottom bar */
+  /* Hide v4.3 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
@@ -1036,7 +1036,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v4.2
+        v4.3
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -1200,7 +1200,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
       <button onClick={save} disabled={saving} style={S.btnPrimary}>
         {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Profile'}
       </button>
-      <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>v4.2</div>
+      <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>v4.3</div>
     </div>
   );
 }
@@ -4756,22 +4756,21 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- iOS status bar: CONFIRMED that iOS renders standalone content full-screen UNDER
-     the status bar (content overlaps the clock) and env(safe-area-inset-top) reports 0.
-     So we BOTH (a) paint the status strip with a fixed grey cover that stays put on
-     scroll, AND (b) pad .main-wrap down by the same height so content starts below the
-     cover (not hidden under it). Both are required: cover alone hides the header;
-     padding alone lets content scroll under the status bar. Active on iOS (app +
-     Safari); 0 on desktop. -->
+<!-- iOS status bar:
+     • STANDALONE home-screen app renders content full-screen UNDER the status bar
+       (content overlaps the clock) and env(safe-area-inset-top) reports 0. So in
+       standalone we paint a fixed grey cover over the status strip AND pad .main-wrap
+       down by the same height so content starts below it.
+     • SAFARI insets content below the status bar itself, so adding our cover+padding
+       there DOUBLES the offset (too-tall grey). The grey html/body background already
+       tints the status strip in Safari. So we apply the cover+padding in STANDALONE
+       ONLY. Desktop & Safari get nothing (--sbh stays 0). -->
 <script>
 (function(){
   var SBH = 47; // iPhone 12 Pro status-bar height (CSS px)
-  function onIOS(){
-    var standalone = (navigator.standalone === true) ||
+  function isStandalone(){
+    return (navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    var ios = /iP(hone|od|ad)/.test(navigator.userAgent || '') ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    return standalone || ios;
   }
   function ensureCover(){
     var el = document.getElementById('ios-status-cover');
@@ -4786,7 +4785,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
     return el;
   }
   function apply(){
-    var on = onIOS();
+    var on = isStandalone();
     var h = on ? SBH : 0;
     document.documentElement.style.setProperty('--sbh', h + 'px');
     var el = ensureCover();
@@ -4803,7 +4802,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjExJzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjEyJzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
