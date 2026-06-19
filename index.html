@@ -4758,11 +4758,14 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- Status bar: single sticky grey bar (first child of <body>) + live −/+ adjuster so the
-     user dials in the exact height for their device (saved to localStorage). Default 47. -->
+<!-- Status bar (user-confirmed working config). The fix is the PRESENCE of this empty
+     sticky bar as the first child of <body> — with it present, iOS positions the app
+     content below the status bar and the grey html/body background shows through the
+     status strip (the grey bar you see). REMOVING the element (as v4.8 did) lets content
+     render up under the status icons → overlap. Height is 0px: that's the value the user
+     dialed in on-device via the live adjuster. Keep this element; do not delete it. -->
 <script>
 (function(){
-  var KEY = 'sbHeightPx';
   function isIOS(){
     var standalone = (navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
@@ -4770,52 +4773,24 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     return standalone || ios;
   }
-  function getH(){
-    var v = parseInt(localStorage.getItem(KEY), 10);
-    return isNaN(v) ? 47 : Math.max(0, Math.min(120, v));
-  }
-  function bar(){
+  function ensureBar(){
     var el = document.getElementById('ios-status-cover');
     if (!el){
       el = document.createElement('div');
       el.id = 'ios-status-cover';
-      el.style.cssText = 'position:sticky;top:0;left:0;right:0;z-index:99999;pointer-events:none;background:var(--bg);';
+      el.style.cssText = 'position:sticky;top:0;left:0;right:0;height:0px;z-index:99999;pointer-events:none;background:var(--bg);';
       document.body.insertBefore(el, document.body.firstChild);
     } else if (el !== document.body.firstElementChild){
       document.body.insertBefore(el, document.body.firstChild);
     }
     return el;
   }
-  function setH(h){
-    h = Math.max(0, Math.min(120, h));
-    localStorage.setItem(KEY, h);
-    bar().style.height = h + 'px';
-    var lbl = document.getElementById('sb-adj-val');
-    if (lbl) lbl.textContent = h + 'px';
-  }
-  function ensureAdj(){
-    if (document.getElementById('sb-adj')) return;
-    var wrap = document.createElement('div');
-    wrap.id = 'sb-adj';
-    wrap.style.cssText = 'position:fixed;right:8px;bottom:96px;z-index:100000;display:flex;align-items:center;gap:8px;'
-      + 'background:#111;color:#fff;border-radius:24px;padding:6px 10px;font:13px/1 -apple-system,sans-serif;'
-      + 'box-shadow:0 4px 16px rgba(0,0,0,.4);';
-    var minus = document.createElement('button'); minus.textContent = '−';
-    var plus = document.createElement('button'); plus.textContent = '+';
-    var bstyle = 'width:36px;height:36px;border-radius:18px;border:none;background:#333;color:#fff;font-size:20px;line-height:1;cursor:pointer;';
-    minus.style.cssText = bstyle; plus.style.cssText = bstyle;
-    var lbl = document.createElement('span'); lbl.id = 'sb-adj-val'; lbl.textContent = getH() + 'px';
-    lbl.style.cssText = 'min-width:44px;text-align:center;font-variant-numeric:tabular-nums;';
-    var tag = document.createElement('span'); tag.textContent = 'bar'; tag.style.cssText = 'opacity:.6;font-size:11px;';
-    minus.addEventListener('click', function(){ setH(getH() - 1); });
-    plus.addEventListener('click', function(){ setH(getH() + 1); });
-    wrap.appendChild(tag); wrap.appendChild(minus); wrap.appendChild(lbl); wrap.appendChild(plus);
-    document.body.appendChild(wrap);
-  }
   function apply(){
-    if (!isIOS()){ bar().style.height = '0px'; return; }
-    bar().style.height = getH() + 'px';
-    ensureAdj();
+    ensureBar(); // present on every platform; height 0
+    // clean up the old floating adjuster + its saved value from earlier versions
+    var adj = document.getElementById('sb-adj');
+    if (adj) adj.remove();
+    try { localStorage.removeItem('sbHeightPx'); } catch(e){}
   }
   if (document.body) apply();
   else document.addEventListener('DOMContentLoaded', apply);
