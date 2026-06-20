@@ -987,6 +987,25 @@ function Sidebar({ page, setPage, user, pageToPath }) {
       setTimeout(window.__sbNudge, 750);
     }
   }, [moreOpen]);
+  // While the More sheet is open, dim the iOS status-bar tint (theme-color) so the top
+  // strip darkens to match the dimmed page behind the sheet — Safari composites that
+  // strip from theme-color, which the in-page dim overlay can't reach. Restored on close.
+  React.useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) return;
+    if (moreOpen) {
+      if (meta.getAttribute('data-saved') == null) meta.setAttribute('data-saved', meta.getAttribute('content') || '');
+      let hex = (meta.getAttribute('data-saved') || '#f0f2f5').replace('#','');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+      const k = 0.55; // ~45% toward black, matching the sheet backdrop
+      const h2 = x => ('0' + Math.round((isNaN(x) ? 240 : x) * k).toString(16)).slice(-2);
+      meta.setAttribute('content', '#' + h2(r) + h2(g) + h2(b));
+    } else {
+      const saved = meta.getAttribute('data-saved');
+      if (saved != null) { meta.setAttribute('content', saved); meta.removeAttribute('data-saved'); }
+    }
+  }, [moreOpen]);
   const desktopItems = NAV;
   const mobileItems = MOBILE_TABS.map(id => NAV.find(n => n.id === id)).filter(Boolean);
   const isInMore = MOBILE_MORE.includes(page);
@@ -1212,7 +1231,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
         {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Profile'}
       </button>
       <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>
-        v3.2 · {((typeof navigator!=='undefined' && navigator.standalone===true) || (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'app' : 'browser'} · b22
+        v3.2 · {((typeof navigator!=='undefined' && navigator.standalone===true) || (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'app' : 'browser'} · b23
       </div>
     </div>
   );
@@ -4808,35 +4827,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
       void el.offsetHeight;
     }, 260);
   }
-  function setH(h){
-    h = Math.max(0, Math.min(120, h));
-    localStorage.setItem(KEY, h);
-    bar().style.height = h + 'px';
-    var lbl = document.getElementById('sb-adj-val');
-    if (lbl) lbl.textContent = h + 'px';
-  }
-  function ensureAdj(){
-    if (document.getElementById('sb-adj')) return;
-    var wrap = document.createElement('div');
-    wrap.id = 'sb-adj';
-    wrap.style.cssText = 'position:fixed;right:8px;bottom:96px;z-index:100000;display:flex;align-items:center;gap:8px;'
-      + 'background:#111;color:#fff;border-radius:24px;padding:6px 10px;font:13px/1 -apple-system,sans-serif;'
-      + 'box-shadow:0 4px 16px rgba(0,0,0,.4);';
-    var minus = document.createElement('button'); minus.textContent = '−';
-    var plus = document.createElement('button'); plus.textContent = '+';
-    var bstyle = 'width:36px;height:36px;border-radius:18px;border:none;background:#333;color:#fff;font-size:20px;line-height:1;cursor:pointer;';
-    minus.style.cssText = bstyle; plus.style.cssText = bstyle;
-    var lbl = document.createElement('span'); lbl.id = 'sb-adj-val'; lbl.textContent = getH() + 'px';
-    lbl.style.cssText = 'min-width:44px;text-align:center;font-variant-numeric:tabular-nums;';
-    var tag = document.createElement('span'); tag.textContent = 'bar'; tag.style.cssText = 'opacity:.6;font-size:11px;';
-    minus.addEventListener('click', function(){ setH(getH() - 1); });
-    plus.addEventListener('click', function(){ setH(getH() + 1); });
-    wrap.appendChild(tag); wrap.appendChild(minus); wrap.appendChild(lbl); wrap.appendChild(plus);
-    document.body.appendChild(wrap);
-  }
   function apply(){
     bar().style.height = getH() + 'px';
-    ensureAdj();
+    // the floating −/+ adjuster has been removed now the height is settled; strip any
+    // leftover one from a cached older build
+    var adj = document.getElementById('sb-adj');
+    if (adj) adj.remove();
     nudge();
   }
   window.__sbNudge = nudge; // let React re-trigger the status-bar paint after in-app navigation (More menu)
@@ -4855,7 +4851,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjIyJzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjIzJzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
