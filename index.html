@@ -391,7 +391,7 @@ select {
   }
   /* Hide divider in mobile bottom bar */
   .nav-sidebar .nav-divider { display: none !important; }
-  /* Hide v5.0 footer on mobile bottom bar */
+  /* Hide v5.1 footer on mobile bottom bar */
   .nav-sidebar .nav-footer { display: none !important; }
   .main-wrap {
     margin-left: 0 !important;
@@ -1036,7 +1036,7 @@ function Sidebar({ page, setPage, user, pageToPath }) {
         &nbsp;
       </div>
       <div className="nav-footer" style={{padding:'12px 16px', fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--border)'}}>
-        v5.0
+        v5.1
       </div>
     </nav>
     {/* Mobile More bottom sheet */}
@@ -1201,7 +1201,7 @@ function ProfilePage({ uid, darkMode, toggleDark }) {
         {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Profile'}
       </button>
       <div style={{textAlign:'right', fontSize:11, color:'var(--muted)', marginTop:8}}>
-        v5.0 · {((typeof navigator!=='undefined' && navigator.standalone===true) || (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'app' : 'browser'}
+        v5.1 · {((typeof navigator!=='undefined' && navigator.standalone===true) || (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? 'app' : 'browser'}
       </div>
     </div>
   );
@@ -4758,17 +4758,18 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 
-<!-- Status bar: single sticky grey bar (first child of <body>) + live −/+ adjuster.
-     Empirically a 0px bar = removed bar = content overlaps the status icons; the working
-     look needs a REAL height. Default 1px (user's suggestion to start from); user dials
-     the exact value on-device, saved to localStorage. Once confirmed, hardcode + remove
-     the control. -->
+<!-- Status bar: sticky grey bar (first child of <body>). KEY FINDING (user, on-device):
+     it's a RENDER-TIMING bug, not a height problem — on first load iOS doesn't composite
+     the bar (→ overlap), but ANY height change forces a reflow and then the bar appears
+     and stays (even back at 0px). So on load we auto-"nudge" the height across a couple
+     animation frames to force that reflow programmatically. −/+ control kept for now to
+     verify. Default 0px. -->
 <script>
 (function(){
   var KEY = 'sbHeightPx';
   function getH(){
     var v = parseInt(localStorage.getItem(KEY), 10);
-    return isNaN(v) ? 1 : Math.max(0, Math.min(120, v));
+    return isNaN(v) ? 0 : Math.max(0, Math.min(120, v));
   }
   function bar(){
     var el = document.getElementById('ios-status-cover');
@@ -4781,6 +4782,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
       document.body.insertBefore(el, document.body.firstChild);
     }
     return el;
+  }
+  // Force the same reflow the manual control triggers: raise the height ABOVE the ~5px
+  // render threshold, HOLD it long enough for iOS to actually paint that frame, then
+  // settle to the target. A quick revert (rAF) isn't enough — iOS needs the raised frame
+  // to render first, which is why the user's manual raise-then-lower works.
+  function nudge(){
+    var el = bar();
+    var target = getH();
+    el.style.height = (target + 10) + 'px';
+    void el.offsetHeight; // flush layout
+    setTimeout(function(){
+      el.style.height = target + 'px';
+      void el.offsetHeight;
+    }, 260);
   }
   function setH(h){
     h = Math.max(0, Math.min(120, h));
@@ -4811,18 +4826,24 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   function apply(){
     bar().style.height = getH() + 'px';
     ensureAdj();
+    nudge();
   }
   if (document.body) apply();
   else document.addEventListener('DOMContentLoaded', apply);
-  ['orientationchange','resize','pageshow','load'].forEach(function(ev){
-    window.addEventListener(ev, function(){ setTimeout(apply, 200); });
+  // Re-nudge after load and when the app is brought to the foreground.
+  ['load','pageshow'].forEach(function(ev){
+    window.addEventListener(ev, function(){ setTimeout(apply, 100); });
   });
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) setTimeout(nudge, 100);
+  });
+  [300, 800, 1500].forEach(function(t){ setTimeout(nudge, t); });
 })();
 </script>
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjE5JzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjIwJzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
