@@ -1651,7 +1651,7 @@ function GamesPage({ uid, setPage, setGameId, active }) {
                 <div style={{flex:1, minWidth:0}}>
                   <div style={{...S.listTitle, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
                     <span>{g.teamName ? `${g.teamName} vs. ${g.opponent||'Unknown'}` : `vs. ${g.opponent||'Unknown'}`}</span>
-                    {res && g.myScore!==undefined && g.myScore!=='' && g.oppScore!=='' && (
+                    {res && (
                       <span style={{background:res.color+'18', color:res.color, borderRadius:6, padding:'3px 8px', fontWeight:700, fontSize:12, flexShrink:0}}>
                         {res.label} {g.myScore}–{g.oppScore}
                       </span>
@@ -1700,7 +1700,7 @@ function NewGamePage({ uid, setPage, setGameId }) {
   }, [uid]);
 
   useEffect(() => {
-    if (f.time) { const h = parseInt(f.time.split(':')[0]); upd('dayNight', (h >= 18 || h < 6) ? 'Night' : 'Day'); }
+    if (f.time) { const h = parseInt(f.time.split(':')[0]); upd('dayNight', (h >= 19 || h < 6) ? 'Night' : 'Day'); }
   }, [f.time]);
 
   const pickSeason = id => {
@@ -2479,7 +2479,7 @@ function GameDetailPage({ uid, gameId, setPage, prevPage='games' }) {
               <span style={{fontSize:18, fontWeight:700, color:'var(--text)', lineHeight:1.3}}>
                 {game.teamName ? `${game.teamName} vs. ${game.opponent||'Unknown'}` : `vs. ${game.opponent||'Unknown'}`}
               </span>
-              {res && game.myScore !== undefined && game.myScore !== '' && game.oppScore !== '' && (
+              {res && (
                 <span style={{background:res.color+'18', color:res.color, borderRadius:6, padding:'4px 10px', fontWeight:700, fontSize:14, marginLeft:10, flexShrink:0}}>
                   {res.label} {game.myScore}–{game.oppScore}
                 </span>
@@ -4832,7 +4832,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
 <script>
   if ('serviceWorker' in navigator) {
-    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjI1JzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
+    var b64 = "Y29uc3QgQ0FDSEUgPSAnc29mdGJhbGwtdjI2JzsKY29uc3QgQVNTRVRTID0gWycvc29mdGJhbGx0cmFja2VyLycsICcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGMgPT4gYy5hZGRBbGwoQVNTRVRTKSkpOyBzZWxmLnNraXBXYWl0aW5nKCk7IH0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZSA9PiB7IGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+IFByb21pc2UuYWxsKGtleXMuZmlsdGVyKGsgPT4gayAhPT0gQ0FDSEUpLm1hcChrID0+IGNhY2hlcy5kZWxldGUoaykpKSkpOyBzZWxmLmNsaWVudHMuY2xhaW0oKTsgfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICB2YXIgcmVxID0gZS5yZXF1ZXN0OwogIGlmIChyZXEubWV0aG9kICE9PSAnR0VUJykgcmV0dXJuOwogIGlmIChyZXEudXJsLmluY2x1ZGVzKCdmaXJlYmFzZScpIHx8IHJlcS51cmwuaW5jbHVkZXMoJ2dvb2dsZWFwaXMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCdnc3RhdGljJykgfHwgcmVxLnVybC5pbmNsdWRlcygnY2RuanMnKSB8fCByZXEudXJsLmluY2x1ZGVzKCd1bnBrZycpKSByZXR1cm47CiAgdmFyIGFjY2VwdCA9IHJlcS5oZWFkZXJzLmdldCgnYWNjZXB0JykgfHwgJyc7CiAgaWYgKHJlcS5tb2RlID09PSAnbmF2aWdhdGUnIHx8IGFjY2VwdC5pbmNsdWRlcygndGV4dC9odG1sJykpIHsKICAgIC8vIE5FVFdPUkstRklSU1QgZm9yIGFwcCBIVE1MOiBhbHdheXMgbG9hZCB0aGUgZnJlc2hlc3QgZGVwbG95IHdoZW4gb25saW5lLAogICAgLy8gZmFsbCBiYWNrIHRvIGNhY2hlIG9ubHkgd2hlbiBvZmZsaW5lLiBGaXhlcyBzdGFsZS1kZXBsb3kgcHJvYmxlbS4KICAgIGUucmVzcG9uZFdpdGgoZmV0Y2gocmVxKS50aGVuKGZ1bmN0aW9uKHJlcyl7IHZhciBjb3B5ID0gcmVzLmNsb25lKCk7IGNhY2hlcy5vcGVuKENBQ0hFKS50aGVuKGZ1bmN0aW9uKGMpeyBjLnB1dCgnL3NvZnRiYWxsdHJhY2tlci9pbmRleC5odG1sJywgY29weSk7IH0pOyByZXR1cm4gcmVzOyB9KS5jYXRjaChmdW5jdGlvbigpeyByZXR1cm4gY2FjaGVzLm1hdGNoKCcvc29mdGJhbGx0cmFja2VyL2luZGV4Lmh0bWwnKTsgfSkpOwogICAgcmV0dXJuOwogIH0KICAvLyBDYWNoZS1maXJzdCBmb3Igb3RoZXIgc2FtZS1vcmlnaW4gYXNzZXRzIChpY29ucywgbWFuaWZlc3QpLgogIGUucmVzcG9uZFdpdGgoY2FjaGVzLm1hdGNoKHJlcSkudGhlbihmdW5jdGlvbihyKXsgcmV0dXJuIHIgfHwgZmV0Y2gocmVxKTsgfSkpOwp9KTs=";
     var code = atob(b64);
     var blob = new Blob([code], {type: 'application/javascript'});
     var url = URL.createObjectURL(blob);
