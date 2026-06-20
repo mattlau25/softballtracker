@@ -522,7 +522,7 @@ const parksCol = uid => userDoc(uid).collection('parks');
 const practicesCol = uid => userDoc(uid).collection('practices');
 
 // ─── STAT HELPERS ──────────────────────────────────────────────────────────────
-const fmt3 = n => isNaN(n) || !isFinite(n) ? '.000' : '.' + Math.round(n * 1000).toString().padStart(3,'0');
+const fmt3 = n => { if (isNaN(n) || !isFinite(n)) return '.000'; const r = Math.round(n * 1000); return r >= 1000 ? (r / 1000).toFixed(3) : '.' + r.toString().padStart(3,'0'); };
 const calcAVG = (h, ab)      => ab === 0 ? '.---' : fmt3(h / ab);
 const calcOBP = (h, bb, hbp, sf, ab) => { const d = ab + bb + hbp + sf; return d === 0 ? '.---' : fmt3((h + bb + hbp) / d); };
 const calcSLG = (tb, ab)     => ab === 0 ? '.---' : fmt3(tb / ab);
@@ -3936,7 +3936,9 @@ function StatsPage({ uid }) {
     const lastAvg = lastMonth.h / lastMonth.ab;
     const diff = thisAvg - lastAvg;
     if (Math.abs(diff) < 0.01) return null;
-    const diffStr = (diff > 0 ? '+' : '') + Math.round(diff * 1000).toString().padStart(diff < 0 ? 4 : 3, '0');
+    const mag = Math.abs(diff);
+    const magStr = mag >= 1 ? mag.toFixed(3) : '.' + Math.round(mag * 1000).toString().padStart(3, '0');
+    const diffStr = (diff > 0 ? '+' : '-') + magStr;
     const [yr0,mo0] = sorted[0][0].split('-');
     const [yr1,mo1] = sorted[1][0].split('-');
     const label0 = new Date(parseInt(yr0),parseInt(mo0)-1,1).toLocaleDateString('en-CA',{month:'short'});
@@ -4375,9 +4377,9 @@ function TrendsPage({ uid }) {
   });
 
   const metrics=[
-    {key:'avg',  label:'AVG',     color:'#1e3a5f', fmt:v=>v===null?'—':'.'+Math.round(v*1000).toString().padStart(3,'0'), isRate:true},
-    {key:'obp',  label:'OBP',     color:'#2b6cb0', fmt:v=>v===null?'—':'.'+Math.round(v*1000).toString().padStart(3,'0'), isRate:true},
-    {key:'slg',  label:'SLG',     color:'#276749', fmt:v=>v===null?'—':'.'+Math.round(v*1000).toString().padStart(3,'0'), isRate:true},
+    {key:'avg',  label:'AVG',     color:'#1e3a5f', fmt:v=>v===null?'—':fmt3(v), isRate:true},
+    {key:'obp',  label:'OBP',     color:'#2b6cb0', fmt:v=>v===null?'—':fmt3(v), isRate:true},
+    {key:'slg',  label:'SLG',     color:'#276749', fmt:v=>v===null?'—':fmt3(v), isRate:true},
     {key:'ops',  label:'OPS',     color:'#b7791f', fmt:v=>v===null?'—':v.toFixed(3), isRate:true},
     {key:'h',    label:'H/Game',  color:'#276749', fmt:v=>v===null?'—':v},
     {key:'hr',   label:'HR/Game', color:'#c53030', fmt:v=>v===null?'—':v},
